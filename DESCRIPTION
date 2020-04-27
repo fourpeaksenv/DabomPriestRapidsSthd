@@ -11,3 +11,5 @@ License: MIT + file LICENSE
 ByteCompile: true
 Encoding: UTF-8
 LazyData: true
+URL: https://github.com/KevinSee/DabomPriestRapidsSthd
+BugReports: https://github.com/KevinSee/DabomPriestRapidsSthd/issues
