@@ -1,3 +1,6 @@
 .Rproj.user
 .Rhistory
 .RData
+
+# ignore temporary files when documents are open
+~$*

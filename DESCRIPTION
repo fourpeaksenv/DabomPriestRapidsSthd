@@ -1,7 +1,7 @@
 Package: DabomPriestRapidsSthd
 Title: Estimate Adult Steelhead Escapement to Areas Upstream of Priest Rapids Dam
 Version: 0.0.0.9000
-Authors@R: 
+Authors@R:
     person(given = "Kevin",
            family = "See",
            role = c("aut", "cre"),
@@ -13,3 +13,7 @@ Encoding: UTF-8
 LazyData: true
 URL: https://github.com/KevinSee/DabomPriestRapidsSthd
 BugReports: https://github.com/KevinSee/DabomPriestRapidsSthd/issues
+Imports: bookdown,
+    here
+Suggests: devtools,
+    git2r
