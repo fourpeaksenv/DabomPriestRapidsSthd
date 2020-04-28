@@ -9,6 +9,7 @@
 # library(PITcleanr)
 library(tidyverse)
 library(readxl)
+library(lubridate)
 library(janitor)
 library(magrittr)
 
@@ -24,93 +25,15 @@ bio_df = excel_sheets('analysis/data/raw_data/WDFW/AllBioData.xlsx') %>%
            data_df = read_excel('analysis/data/raw_data/WDFW/AllBioData.xlsx',
                                 yr)
            return(data_df)
-         })
+         }) %>%
+  mutate_at(vars(TrapDate),
+            list(ymd))
 
 # put bounds around years
 # min_yr = 2011
 # max_yr = 2019
 min_yr = min(bio_df$Year)
 max_yr = max(bio_df$Year)
-
-# bio_df = min_yr:max_yr %>%
-#   as.list %>%
-#   rlang::set_names() %>%
-#   map_df(.id = 'Year',
-#          .f = function(yr) {
-#
-#            data_df = read_excel(paste0('analysis/data/raw_data/WDFW/UC_Steelhead_', yr, '.xlsx'),
-#                            sheet = 'Bio Data')
-#
-#            if(c('PIT (Dorsal)') %in% names(data_df)) {
-#              data_df %<>%
-#                rename(`Primary Tag` = `PIT (Dorsal)`)
-#            }
-#
-#            if(c('PIT (Unknown)') %in% names(data_df)) {
-#              data_df %<>%
-#                rename(`Secondary Tag` = `PIT (Unknown)`)
-#            }
-#
-#            if(c('PIT(Unknown)') %in% names(data_df)) {
-#              data_df %<>%
-#                rename(`Secondary Tag` = `PIT(Unknown)`)
-#            }
-#
-#            if(c('Primary PIT Tag') %in% names(data_df)) {
-#              data_df %<>%
-#                rename(`Primary Tag` = `Primary PIT Tag`)
-#            }
-#
-#            if(c('Secondary PIT Tag') %in% names(data_df)) {
-#              data_df %<>%
-#                rename(`Secondary Tag` = `Secondary PIT Tag`)
-#            }
-#
-#            if(c('Double Tag') %in% names(data_df)) {
-#              data_df %<>%
-#                rename(`Secondary Tag` = `Double Tag`)
-#            }
-#
-#            data_df %<>%
-#              rename(TagID = `Primary Tag`,
-#                     TagOther = `Secondary Tag`) %>%
-#              select(TagID,
-#                     TagOther,
-#                     TrapDate = SurveyDate,
-#                     Origin = `Origin(final)`,
-#                     Sex = `Sex(final)`,
-#                     Age = FinalAge,
-#                     ForkLength,
-#                     POH,
-#                     Weight) %>%
-#              mutate(Origin = recode(Origin,
-#                                     'h' = 'H'),
-#                     Sex = recode(Sex,
-#                                  'f' = 'F',
-#                                  'm' = 'M')) %>%
-#              distinct()
-#
-#            if(class(data_df$TrapDate) == 'character') {
-#              data_df %<>%
-#                mutate_at(vars(TrapDate),
-#                          list(~ excel_numeric_to_date(as.numeric(.)))) %>%
-#                mutate_at(vars(TrapDate),
-#                          list(as.POSIXct))
-#            }
-#
-#            # fix sex of one tag, an age 2 hatchery fish with "unknown" sex
-#            if(yr == 2014) {
-#              data_df %<>%
-#                mutate(Sex = if_else(TagID == '3D9.1C2E046EA3',
-#                                     'M',
-#                                     Sex))
-#            }
-#
-#            return(data_df)
-#
-#          })
-
-
 
 
 # pull out PIT tag numbers
