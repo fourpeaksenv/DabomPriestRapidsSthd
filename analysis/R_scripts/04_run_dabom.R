@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: prep and run DABOM
 # Created: 4/1/20
-# Last Modified: 4/1/20
+# Last Modified: 4/28/20
 # Notes:
 
 #-----------------------------------------------------------------
@@ -14,7 +14,6 @@ library(rjags)
 library(magrittr)
 library(lubridate)
 
-spp = "Chinook"
 #-----------------------------------------------------------------
 # load configuration and site_df data
 
@@ -24,7 +23,7 @@ spp = "Chinook"
 # set year
 yr = 2019
 
-load(paste0('analysis/data/derived_data/PITcleanr/TUM_', spp, '_', yr, '.rda'))
+load(paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
 
 proc_ch <- proc_list$ProcCapHist %>%
   mutate(UserProcStatus = if_else(UserProcStatus == '',
@@ -47,7 +46,7 @@ proc_ch <- proc_list$ProcCapHist %>%
 #   xtabs(~ UserProcStatus, .)
 
 # file path to the default and initial model
-basic_modNm = 'analysis/model_files/TUM_DABOM.txt'
+basic_modNm = 'analysis/model_files/PRD_DABOM.txt'
 
 writeDABOM_TUM(file_name = basic_modNm)
 
@@ -58,7 +57,7 @@ writeDABOM_TUM(file_name = basic_modNm)
 #------------------------------------------------------------------------------
 
 # filepath for specific JAGS model code for species and year
-mod_path = paste0('analysis/model_files/TUM_', spp, '_', yr, '.txt')
+mod_path = paste0('analysis/model_files/PRD_Steelhead_', yr, '.txt')
 
 # writes species and year specific jags code
 fixNoFishNodes(basic_modNm,
@@ -72,7 +71,10 @@ fixNoFishNodes(basic_modNm,
 #------------------------------------------------------------------------------
 # turn into wide version of capture histories, and add origin
 # add fish origin from biological data
-bio_df = read_rds('analysis/data/derived_data/Bio_Data_2008_2019.rds') %>%
+file_nms = list.files('analysis/data/derived_data')
+bio_nm = file_nms[grepl('Bio', file_nms) & grepl('.rds$', file_nms)]
+
+bio_df = read_rds(paste0('analysis/data/derived_data/', bio_nm)) %>%
   filter(Year == yr)
 
 dabom_df = createDABOMcapHist(proc_ch,
@@ -80,7 +82,8 @@ dabom_df = createDABOMcapHist(proc_ch,
                               split_matrices = F) %>%
   # add origin information
   left_join(bio_df %>%
-              select(TagID, Origin)) %>%
+              select(TagID, Origin) %>%
+              distinct()) %>%
   select(TagID, Origin, everything())
 
 dabom_list = createDABOMcapHist(proc_ch,
@@ -142,8 +145,9 @@ jags = jags.model(mod_path,
                   data = jags_data,
                   inits = init_fnc,
                   n.chains = 4,
-                  n.adapt = 2500)
-
+                  n.adapt = 1000)
+update(jags,
+       n.iter = 2500)
 dabom_mod = coda.samples(jags,
                          jags_params,
                          n.iter = 2500,
@@ -154,7 +158,7 @@ dabom_mod = coda.samples(jags,
 proc_list[["proc_ch"]] <- proc_ch
 
 save(dabom_mod, dabom_list, proc_list, parent_child,
-     file = paste0("analysis/data/derived_data/model_fits/TUM_DABOM_", spp, '_', yr,'.rda'))
+     file = paste0("analysis/data/derived_data/model_fits/PRA_Steelhead_", yr,'_DABOM.rda'))
 
 
 
@@ -162,7 +166,7 @@ save(dabom_mod, dabom_list, proc_list, parent_child,
 # diagnostics
 #------------------------------------------------------------------------------
 # load model run
-load(paste0("analysis/data/derived_data/model_fits/PRO_DABOM_", spp, '_', yr,'.rda'))
+load(paste0("analysis/data/derived_data/model_fits/PRA_Steelhead_", yr,'_DABOM.rda'))
 
 # using mcmcr package
 library(mcmcr)
