@@ -1,13 +1,14 @@
 # Author: Kevin See
 # Purpose: clean PTAGIS data with PITcleanr
-# Created: 4/1/20
-# Last Modified: 4/1/20
+# Created: 4/27/20
+# Last Modified: 4/27/20
 # Notes:
 
 #-----------------------------------------------------------------
 # load needed libraries
 library(PITcleanr)
 library(tidyverse)
+library(lubridate)
 library(readxl)
 library(magrittr)
 
@@ -18,8 +19,8 @@ load('analysis/data/derived_data/site_config.rda')
 # which spawn year are we dealing with?
 yr = 2019
 
-# start date is May 1
-start_date = paste0(yr, '0501')
+# start date is June 1 of the previous year
+start_date = paste0(yr - 1, '0601')
 
 # build parent-child table
 parent_child = createParentChildDf(site_df,
@@ -28,64 +29,55 @@ parent_child = createParentChildDf(site_df,
 
 # get raw observations from PTAGIS
 # These come from running a saved query on the list of tags to be used
-observations = read_csv(paste0('analysis/data/raw_data/PTAGIS/Tumwater_Chinook_', yr, '.csv'))
-
-if(yr == 2019) {
-  # 4 tags were collected at Tumwater and released into the White River above detection site, so should not be included in model
-  observations %<>%
-    filter(! `Tag Code` %in% c('3DD.00777D1003',
-                               '3DD.00777D364F',
-                               '3DD.0077B5E7BF',
-                               '3DD.0077D002A6'))
-}
-
-# deal with some double tagged fish
-bio_df = read_rds('analysis/data/derived_data/Bio_Data_2008_2019.rds') %>%
-  filter(Year == yr)
-
-dbl_tag = bio_df %>%
-  filter(!is.na(TagOther))
-
-if(nrow(dbl_tag) > 0) {
-  observations %<>%
-    left_join(dbl_tag %>%
-                select(`Tag Code` = TagOther,
-                       TagID)) %>%
-    # filter(!is.na(TagID))
-    mutate(`Tag Code` = if_else(!is.na(TagID),
-                                TagID,
-                                `Tag Code`)) %>%
-    select(-TagID)
-}
-
-# # remove detections at UWE
-# observations %<>%
-#   filter(`Event Site Code Value` != 'UWE')
+observations = read_csv(paste0('analysis/data/raw_data/PTAGIS/UC_Sthd_', yr, '_CTH.csv'))
 
 # process those observations with PITcleanr, using Tumwater-specific function
-proc_list = processCapHist_TUM(start_date = start_date,
+proc_list = processCapHist_PRD(startDate = start_date,
                                configuration = configuration,
                                parent_child = parent_child,
                                observations = observations,
-                               last_obs_date = paste0(yr, "0930"),
+                               last_obs_date = ymd(start_date) + years(1) + months(1),
                                truncate = T,
-                               save_file = T,
-                               file_name = paste0('outgoing/PITcleanr/TUM_Chinook_', yr, '.xlsx'))
+                               site_df = site_df,
+                               step_num = 1,
+                               save_file = F,
+                               file_name = paste0('outgoing/PITcleanr/UC_Steelhead_', yr, '.xlsx'))
+
+# create node order and list of nodes within sevaral population groups
+node_order = createNodeOrder(proc_list$ValidPaths,
+                             configuration) %>%
+  left_join(stack(site_list) %>%
+              tbl_df() %>%
+              select(Group = ind,
+                     NodeSite = values) %>%
+              mutate(BranchNum = as.integer(Group))) %>%
+  distinct()
+
+proc_list$NodeOrder = node_order
 
 # save some stuff
 save(yr, start_date, parent_child, proc_list,
-     file = paste0('analysis/data/derived_data/PITcleanr/TUM_Chinook_', yr, '.rda'))
+     file = paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
 
-#-----------------------------------------------------------------
-# Read in the file returned by the Yakima
-#-----------------------------------------------------------------
-load(paste0('analysis/data/derived_data/PITcleanr/TUM_Chinook_', yr, '.rda'))
+#-------------------------------------------
+# NEXT STEPS
+#-------------------------------------------
+# open that Excel file, and filter on the column UserProcStatus, looking for blanks. Fill in each row with TRUE or FALSE, depending on whether that observation should be kept or not. The column AutoProcStatus provides a suggestion, but the biologist's best expert judgement should be used.
 
-proc_ch = read_excel(paste0('analysis/data/raw_data/WDFW/PIT_Cleaned_', yr, ' SPCH Data.xlsx')) %>%
+#-------------------------------------------
+# After receiving cleaned up file back...
+#-------------------------------------------
+load(paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
+
+proc_ch = read_excel(paste0('analysis/data/raw_data/WDFW/UC_Steelhead_', yr, '.xlsx')) %>%
   mutate_at(vars(AutoProcStatus:ValidPath),
             list(as.logical)) %>%
   mutate_at(vars(BranchNum, NodeOrder),
             list(as.integer)) %>%
+  mutate_at(vars(TrapDate),
+            list(lubridate::ymd)) %>%
+  mutate_at(vars(ObsDate, lastObsDate),
+            list(lubridate::ymd_hms)) %>%
   mutate_at(vars(TrapDate),
             list(lubridate::floor_date),
             unit = "days") %>%
@@ -94,15 +86,6 @@ proc_ch = read_excel(paste0('analysis/data/raw_data/WDFW/PIT_Cleaned_', yr, ' SP
               select(Node, Group)) %>%
   select(one_of(names(proc_list$ProcCapHist)))
 
-# fix a few double tags
-proc_ch %<>%
-  left_join(dbl_tag %>%
-               select(AltTag = TagID,
-                      TagID = TagOther)) %>%
-  mutate(TagID = if_else(!is.na(AltTag),
-                         AltTag,
-                         TagID)) %>%
-  select(-AltTag)
 
 proc_ch %>%
   select(TagID, SiteID, Node) %>%
@@ -118,30 +101,21 @@ proc_list$ProcCapHist %>%
               select(TagID, Node) %>%
               distinct())
 
-proc_ch %>%
-  filter(Node == 'UWE') %>%
-  select(TagID) %>%
-  distinct() %>%
-  left_join(proc_ch) %>%
-  filter(!UserProcStatus) %>%
-  select(TagID) %>%
-  distinct() %>%
-  left_join(proc_ch) %>%
-  select(TagID, ObsDate, lastObsDate, SiteID, Node, Direction, matches('Status'))
-
-
-proc_list$ProcCapHist = proc_ch %>%
-  filter(Node != 'UWE')
+# overwrite previously saved capture histories
+proc_list$ProcCapHist = proc_ch
 
 # re-save some stuff
 save(yr, start_date, parent_child, proc_list,
-     file = paste0('analysis/data/derived_data/PITcleanr/TUM_Chinook_', yr, '.rda'))
+     file = paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
 
 
 #-----------------------------------------------------------------
 # tag summaries
 #-----------------------------------------------------------------
-bio_df = read_rds('analysis/data/derived_data/Bio_Data_2008_2019.rds')
+file_nms = list.files('analysis/data/derived_data')
+bio_nm = file_nms[grepl('Bio', file_nms) & grepl('.rds$', file_nms)]
+
+bio_df = read_rds(paste0('analysis/data/derived_data/', bio_nm))
 
 # Fix UserProcStatus, and summarise tag data
 tag_summ = proc_list$ProcCapHist %>%
@@ -153,26 +127,32 @@ tag_summ = proc_list$ProcCapHist %>%
 # any duplicated tags?
 tag_summ %>%
   filter(TagID %in% TagID[duplicated(TagID)]) %>%
+  arrange(TagID, TrapDate) %>%
   as.data.frame()
 
+tag_summ %<>%
+  group_by(TagID) %>%
+  filter(TrapDate == min(TrapDate))
+
 # where are tags assigned?
-# janitor::tabyl(tag_summ, AssignSpawnSite) %>%
-janitor::tabyl(tag_summ, AssignSpawnNode) %>%
+janitor::tabyl(tag_summ, AssignSpawnSite) %>%
+# janitor::tabyl(tag_summ, AssignSpawnNode) %>%
   arrange(desc(n)) %>%
   janitor::adorn_totals()
 
 # which branch are tags assigned to?
 tag_summ %>%
   mutate(Branch = fct_explicit_na(Group,
-                                 'TUM_bb')) %>%
-  janitor::tabyl(Branch) %>%
-  arrange(desc(n)) %>%
-  janitor::adorn_totals()
+                                 'PRA_bb')) %>%
+  janitor::tabyl(Branch, Origin) %>%
+  # janitor::adorn_totals(where = c("row")) %>%
+  # janitor::adorn_percentages(denominator = "col") %>%
+  # janitor::adorn_pct_formatting()
+  janitor::adorn_totals(where = c("row", "col"))
 
 # preliminary estimate of node efficiency
 node_eff = proc_list$ProcCapHist %>%
-  filter(AutoProcStatus) %>%
-  mutate(UserProcStatus = AutoProcStatus) %>%
+  filter(UserProcStatus) %>%
   estNodeEff(node_order = proc_list$NodeOrder)
 
 node_eff %>%
@@ -180,14 +160,11 @@ node_eff %>%
          detEff < 1)
 
 node_eff %>%
-  xtabs(~ (!is.na(detEff)) + (detEff_SE > 0), .)
-
-node_eff %>%
   filter(!is.na(detEff),
          detEff_SE > 0)
 
 node_eff %>%
-  filter(grepl('^TOP', Node))
+  filter(grepl('^LWE', Node))
 
 #-----------------------------------------------------------------
 # examine some of the output
