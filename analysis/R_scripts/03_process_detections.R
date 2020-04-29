@@ -17,7 +17,7 @@ library(magrittr)
 load('analysis/data/derived_data/site_config.rda')
 
 # which spawn year are we dealing with?
-yr = 2019
+yr = 2011
 
 # start date is June 1 of the previous year
 start_date = paste0(yr - 1, '0601')
@@ -36,11 +36,11 @@ proc_list = processCapHist_PRD(startDate = start_date,
                                configuration = configuration,
                                parent_child = parent_child,
                                observations = observations,
-                               last_obs_date = ymd(start_date) + years(1) + months(1),
+                               last_obs_date = format(ymd(start_date) + years(1) + months(1), "%Y%m%d"),
                                truncate = T,
                                site_df = site_df,
                                step_num = 1,
-                               save_file = F,
+                               save_file = T,
                                file_name = paste0('outgoing/PITcleanr/UC_Steelhead_', yr, '.xlsx'))
 
 # create node order and list of nodes within sevaral population groups
@@ -92,17 +92,19 @@ proc_ch %>%
   distinct() %>%
   anti_join(proc_list$ProcCapHist %>%
               select(TagID, Node) %>%
-              distinct())
+              distinct()) %>%
+  xtabs(~ SiteID, .)
 
 proc_list$ProcCapHist %>%
   select(TagID, SiteID, Node) %>%
   distinct() %>%
   anti_join(proc_ch %>%
               select(TagID, Node) %>%
-              distinct())
+              distinct()) %>%
+  xtabs(~ SiteID, .)
 
 # overwrite previously saved capture histories
-proc_list$ProcCapHist = proc_ch
+# proc_list$ProcCapHist = proc_ch
 
 # re-save some stuff
 save(yr, start_date, parent_child, proc_list,
