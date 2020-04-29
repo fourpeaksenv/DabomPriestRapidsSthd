@@ -25,7 +25,7 @@ org_config = org_config %>%
                    Node = 'CLK',
                    ValidNode = T,
                    # making these up
-                   StartDate = as.POSIXct(ymd('20150101')),
+                   StartDate = as.POSIXct(ymd('20100101')),
                    SiteType = 'INT',
                    SiteName = 'Colockum Creek',
                    AntennaGroup = 'Single Colockum Ck',
@@ -36,39 +36,6 @@ org_config = org_config %>%
 
 # customize some nodes based on DABOM framework
 configuration = org_config %>%
-  mutate(Node = ifelse(SiteID %in% c('LNF', 'LEAV'),
-                       'LNF',
-                       Node),
-         Node = ifelse(SiteID %in% c('TUF', 'TUMFBY', 'TUM'),
-                       'TUM',
-                       Node),
-         Node = ifelse(SiteID == 'CHIWAC',
-                       'CHWA0',
-                       Node),
-         Node = ifelse(SiteID == 'CHIWAR',
-                       'CHLA0',
-                       Node),
-         Node = ifelse(SiteID == 'CHIW',
-                       'CHLA0',
-                       Node),
-         Node = ifelse(SiteID == 'CHIKAC',
-                       'CHUA0',
-                       Node),
-         Node = ifelse(SiteID == 'WHITER',
-                       'WTLA0',
-                       Node),
-         Node = ifelse(SiteID == 'LWENAT',
-                       'LWNA0',
-                       Node),
-         Node = ifelse(Node == 'ICL',
-                       'ICLB0',
-                       Node),
-         Node = ifelse(SiteID == 'NASONC',
-                       'NALA0',
-                       Node)) %>%
-  distinct()
-
-configuration = org_config %>%
   filter(!(SiteID == 'WAN' & SiteType == 'MRR'),
          !(SiteID == 'TMF' & SiteType == 'MRR'),
          !(SiteID == 'PRO' & SiteType == 'MRR')) %>%
@@ -78,7 +45,10 @@ configuration = org_config %>%
   mutate(Node = ifelse(SiteID == 'PRDLD1',
                        'PRA',
                        Node)) %>%
-  mutate(Node = ifelse(SiteID %in% c('TUF', 'TUMFBY', 'TUM'),
+  mutate(Node = ifelse(Node == "LWE",
+                       'LWEB0',
+                       Node),
+         Node = ifelse(SiteID %in% c('TUF', 'TUMFBY', 'TUM'),
                        'TUM',
                        Node),
          Node = ifelse(SiteID == 'LNF' & AntennaID %in% c('01', '02'),
