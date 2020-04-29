@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: Develop configuration file for DABOM
 # Created: 4/27/20
-# Last Modified: 4/27/20
+# Last Modified: 4/29/20
 # Notes:
 
 #-----------------------------------------------------------------
@@ -110,6 +110,9 @@ configuration = org_config %>%
          Node = ifelse(SiteID == 'WEA' & AntennaID == 'C2',
                        'WVTA0',
                        Node),
+         Node = ifelse(Node == "LMR",
+                       'LMRB0',
+                       Node),
          Node = ifelse(SiteID == 'LBC' & ConfigID == 100,
                        'LBCB0',
                        Node),
@@ -119,9 +122,6 @@ configuration = org_config %>%
          Node = ifelse(SiteID %in% c('SSC', '18N', 'MHB', 'M3R', 'MWF'),
                        'MRCA0',
                        Node),
-         # Node = ifelse(SiteID == 'TWISPW',
-         #               'TWRA0',
-         #               Node),
          Node = ifelse(SiteID == 'MSH' & AntennaID %in% c('02', '03'),
                        'MSHB0',
                        Node),
@@ -138,6 +138,12 @@ configuration = org_config %>%
                        ifelse(AntennaID == 'D3',
                               'LLCB0',
                               'LLCA0'),
+                       Node),
+         Node = ifelse(Node == "SCP",
+                       'SCPB0',
+                       Node),
+         Node = ifelse(Node == "OMK",
+                       'OMKB0',
                        Node),
          Node = ifelse(SiteID %in% c('OFB', 'OMF'),
                        'OMKA0',
