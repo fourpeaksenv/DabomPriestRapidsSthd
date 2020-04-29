@@ -29,6 +29,48 @@ bio_df = excel_sheets('analysis/data/raw_data/WDFW/AllBioData.xlsx') %>%
   mutate_at(vars(TrapDate),
             list(ymd))
 
+# tag_id = "3D9.1C2D8AE469"
+
+# grab some extra data that was left out
+extra_bio = read_excel("analysis/data/raw_data/WDFW/Steelhead_PRD_BY2011.xlsx",
+                       "Tagging Data") %>%
+  clean_names() %>%
+  mutate(Year = 2011) %>%
+  select(Year,
+         TagID = pi_ttags,
+         TrapDate = date,
+         Sex = sex,
+         Origin = origin,
+         ForkLength = fork,
+         Age = age) %>%
+  filter(!is.na(TagID)) %>%
+  bind_rows(read_excel("analysis/data/raw_data/WDFW/Steelhead_PRD_BY2012.xlsx",
+                       "2011 STHD Tagging Data") %>%
+              clean_names() %>%
+              mutate(Year = 2012) %>%
+              select(Year,
+                     TagID = pi_ttags_1,
+                     TrapDate = date,
+                     Sex = sex,
+                     Origin = origin,
+                     ForkLength = fork,
+                     Age = age) %>%
+              bind_rows(read_excel("analysis/data/raw_data/WDFW/Steelhead_PRD_BY2012.xlsx",
+                                   "UnknownSthdPRD2011Tagging") %>%
+                          clean_names() %>%
+                          mutate(Year = 2012) %>%
+                          select(Year,
+                                 TagID = tag_id,
+                                 TrapDate = tag_date,
+                                 Origin = rear_type,
+                                 ForkLength = length)))
+
+bio_df %>%
+  filter(Year %in% c(2011, 2012)) %>%
+  select(Year, TagID) %>%
+  anti_join(extra_bio)
+
+
 # put bounds around years
 # min_yr = 2011
 # max_yr = 2019
