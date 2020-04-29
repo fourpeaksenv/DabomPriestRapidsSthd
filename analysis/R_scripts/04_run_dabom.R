@@ -21,12 +21,14 @@ library(lubridate)
 # Load required DABOM data
 #-----------------------------------------------------------------
 # set year
-yr = 2019
+yr = 2011
 
 load(paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
 
 proc_ch <- proc_list$ProcCapHist %>%
-  mutate(UserProcStatus = if_else(UserProcStatus == '',
+  mutate_at(vars(UserProcStatus),
+            list(as.logical)) %>%
+  mutate(UserProcStatus = if_else(is.na(UserProcStatus),
                                   AutoProcStatus,
                                   UserProcStatus)) %>%
   filter(UserProcStatus)
@@ -48,7 +50,7 @@ proc_ch <- proc_list$ProcCapHist %>%
 # file path to the default and initial model
 basic_modNm = 'analysis/model_files/PRD_DABOM.txt'
 
-writeDABOM_TUM(file_name = basic_modNm)
+writeDABOM_PRA(file_name = basic_modNm)
 
 #------------------------------------------------------------------------------
 # Alter default model code for species and year of
@@ -77,7 +79,8 @@ bio_nm = file_nms[grepl('Bio', file_nms) & grepl('.rds$', file_nms)]
 bio_df = read_rds(paste0('analysis/data/derived_data/', bio_nm)) %>%
   filter(Year == yr)
 
-dabom_df = createDABOMcapHist(proc_ch,
+dabom_df = createDABOMcapHist(proc_ch %>%
+                                filter(TagID %in% bio_df$TagID),
                               proc_list$NodeOrder,
                               split_matrices = F) %>%
   # add origin information
@@ -86,7 +89,8 @@ dabom_df = createDABOMcapHist(proc_ch,
               distinct()) %>%
   select(TagID, Origin, everything())
 
-dabom_list = createDABOMcapHist(proc_ch,
+dabom_list = createDABOMcapHist(proc_ch %>%
+                                  filter(TagID %in% bio_df$TagID),
                                 proc_list$NodeOrder,
                                 split_matrices = T)
 
@@ -99,14 +103,13 @@ dabom_list$fishOrigin = dabom_df %>%
 table(is.na(dabom_list$fishOrigin))
 
 # Creates a function to spit out initial values for MCMC chains
-n_branch_list = setBranchNums(parent_child)
-# n_branch_list$n_pops_TUM = 8
-init_fnc = setInitialValues_TUM(dabom_list,
-                                n_branch_list)
+# n_branch_list = setBranchNums(parent_child)
+n_branch_list2 = setBranchNums_PRA()
+
+init_fnc = setInitialValues_PRA(dabom_list)
 
 # Create all the input data for the JAGS model
-jags_data = createJAGSinputs_TUM(dabom_list,
-                                 n_branch_list)
+jags_data = createJAGSinputs_PRA(dabom_list)
 
 #------------------------------------------------------------------------------
 # Tell JAGS which parameters in the model that it should save.
@@ -141,18 +144,20 @@ set.seed(12)
 #                         DIC = T)
 
 set.seed(12)
+# adaptation phase
 jags = jags.model(mod_path,
                   data = jags_data,
                   inits = init_fnc,
                   n.chains = 4,
                   n.adapt = 1000)
+# burn-in
 update(jags,
        n.iter = 2500)
+# posterior samples
 dabom_mod = coda.samples(jags,
                          jags_params,
                          n.iter = 2500,
                          thin = 10)
-
 
 # save some stuff
 proc_list[["proc_ch"]] <- proc_ch
