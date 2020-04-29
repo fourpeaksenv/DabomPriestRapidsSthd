@@ -17,7 +17,7 @@ library(magrittr)
 load('analysis/data/derived_data/site_config.rda')
 
 # which spawn year are we dealing with?
-yr = 2011
+yr = 2016
 
 # start date is June 1 of the previous year
 start_date = paste0(yr - 1, '0601')
