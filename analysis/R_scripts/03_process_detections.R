@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: clean PTAGIS data with PITcleanr
 # Created: 4/27/20
-# Last Modified: 4/27/20
+# Last Modified: 5/22/20
 # Notes:
 
 #-----------------------------------------------------------------
@@ -17,47 +17,75 @@ library(magrittr)
 load('analysis/data/derived_data/site_config.rda')
 
 # which spawn year are we dealing with?
-yr = 2016
+yr = 2015
 
-# start date is June 1 of the previous year
-start_date = paste0(yr - 1, '0601')
+for(yr in 2011:2019) {
+  # start date is June 1 of the previous year
+  start_date = paste0(yr - 1, '0601')
 
-# build parent-child table
-parent_child = createParentChildDf(site_df,
-                                   configuration,
-                                   startDate = start_date)
+  # build parent-child table
+  parent_child = createParentChildDf(site_df,
+                                     configuration,
+                                     startDate = start_date)
 
-# get raw observations from PTAGIS
-# These come from running a saved query on the list of tags to be used
-observations = read_csv(paste0('analysis/data/raw_data/PTAGIS/UC_Sthd_', yr, '_CTH.csv'))
+  # get raw observations from PTAGIS
+  # These come from running a saved query on the list of tags to be used
+  observations = read_csv(paste0('analysis/data/raw_data/PTAGIS/UC_Sthd_', yr, '_CTH.csv')) %>%
+    filter(`Event Site Code Value` != "ORPHAN")
 
-# process those observations with PITcleanr, using Tumwater-specific function
-proc_list = processCapHist_PRD(startDate = start_date,
-                               configuration = configuration,
-                               parent_child = parent_child,
-                               observations = observations,
-                               last_obs_date = format(ymd(start_date) + years(1) + months(1), "%Y%m%d"),
-                               truncate = T,
-                               site_df = site_df,
-                               step_num = 1,
-                               save_file = T,
-                               file_name = paste0('outgoing/PITcleanr/UC_Steelhead_', yr, '.xlsx'))
+  # add some observations from Colockum (CLK), a temporary antenna that only operated in some years
+  if(yr %in% c(2015, 2018) ) {
+    clk_obs = read_csv('analysis/data/raw_data/WDFW/CLK_observations.csv') %>%
+      mutate(`Event Type Name` = "Observation",
+             `Event Site Code Value` = 'CLK',
+             `Antenna ID` = 'A1',
+             `Antenna Group Configuration Value` = 100,
+             `CTH Count` = 1) %>%
+      mutate(time = if_else(is.na(time),
+                            hms::hms(seconds = 0,
+                                     minutes = 0,
+                                     hours = 12),
+                            time)) %>%
+      # mutate(`Event Date Time Value` = paste(date, str_sub(time, 1, 5))) %>%
+      mutate(`Event Date Time Value` = paste(date, time)) %>%
+      mutate(obs_date = lubridate::mdy_hms(`Event Date Time Value`)) %>%
+      filter(year(obs_date) == yr) %>%
+      select(-date, -time, -obs_date)
 
-# create node order and list of nodes within sevaral population groups
-node_order = createNodeOrder(proc_list$ValidPaths,
-                             configuration) %>%
-  left_join(stack(site_list) %>%
-              tbl_df() %>%
-              select(Group = ind,
-                     NodeSite = values) %>%
-              mutate(BranchNum = as.integer(Group))) %>%
-  distinct()
+    observations %<>%
+      bind_rows(clk_obs)
 
-proc_list$NodeOrder = node_order
+    rm(clk_obs)
+  }
 
-# save some stuff
-save(yr, start_date, parent_child, proc_list,
-     file = paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
+  # process those observations with PITcleanr, using Tumwater-specific function
+  proc_list = processCapHist_PRD(startDate = start_date,
+                                 configuration = configuration,
+                                 parent_child = parent_child,
+                                 observations = observations,
+                                 last_obs_date = format(ymd(start_date) + years(1) + months(1), "%Y%m%d"),
+                                 truncate = T,
+                                 site_df = site_df,
+                                 step_num = 1,
+                                 save_file = T,
+                                 file_name = paste0('outgoing/PITcleanr/UC_Steelhead_', yr, '.xlsx'))
+
+  # create node order and list of nodes within sevaral population groups
+  node_order = createNodeOrder(proc_list$ValidPaths,
+                               configuration) %>%
+    left_join(stack(site_list) %>%
+                tbl_df() %>%
+                select(Group = ind,
+                       NodeSite = values) %>%
+                mutate(BranchNum = as.integer(Group))) %>%
+    distinct()
+
+  proc_list$NodeOrder = node_order
+
+  # save some stuff
+  save(yr, start_date, parent_child, proc_list,
+       file = paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
+}
 
 #-------------------------------------------
 # NEXT STEPS
@@ -65,11 +93,33 @@ save(yr, start_date, parent_child, proc_list,
 # open that Excel file, and filter on the column UserProcStatus, looking for blanks. Fill in each row with TRUE or FALSE, depending on whether that observation should be kept or not. The column AutoProcStatus provides a suggestion, but the biologist's best expert judgement should be used.
 
 #-------------------------------------------
+# which sites never have detections that appear in PTAGIS?
+#-------------------------------------------
+all_proc_ch = 2011:2019 %>%
+  as.list() %>%
+  rlang::set_names() %>%
+  map_df(.id = "Year",
+         .f = function(yr) {
+           load(paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
+           return(proc_list$ProcCapHist)
+         })
+
+site_df %>%
+  select(SiteID) %>%
+  anti_join(all_proc_ch %>%
+              select(SiteID, Node))
+
+all_proc_ch %>%
+  filter(grepl('MSH', Node)) %>%
+  select(Year:Node) %>%
+  xtabs(~ Year + SiteID, .)
+
+#-------------------------------------------
 # After receiving cleaned up file back...
 #-------------------------------------------
 load(paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
 
-proc_ch = read_excel(paste0('analysis/data/raw_data/WDFW/UC_Steelhead_', yr, '.xlsx')) %>%
+proc_ch = read_excel(paste0('analysis/data/derived_data/WDFW/UC_Steelhead_', yr, '.xlsx')) %>%
   mutate_at(vars(AutoProcStatus:ValidPath),
             list(as.logical)) %>%
   mutate_at(vars(BranchNum, NodeOrder),
