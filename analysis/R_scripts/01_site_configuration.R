@@ -405,8 +405,8 @@ myGraph = tbl_graph(nodes = nodes,
 # myLayout = c('treemap')
 myLayout = c('partition')
 # myLayout = c('circlepack')
-# myLayout = c('star', 'circle', 'gem', 'dh', 'graphopt', 'grid', 'mds',
-#              'randomly', 'fr', 'kk', 'drl', 'lgl')[4]
+myLayout = c('star', 'circle', 'gem', 'dh', 'graphopt', 'grid', 'mds',
+             'randomly', 'fr', 'kk', 'drl', 'lgl')[9]
 #
 # c('star', 'dh', 'lgl')
 
@@ -419,8 +419,10 @@ allGr_p = myGraph %>%
   ggraph(layout = myLayout) +
   geom_edge_diagonal() +
   # geom_edge_link() +
-  geom_node_point(aes(color = Group,
-                      shape = nodeType),
+  # geom_node_point(aes(color = Group,
+  #                     shape = nodeType),
+  #                 size = 7) +
+  geom_node_point(aes(color = Group),
                   size = 7) +
   geom_node_label(aes(label = label),
                   # repel = T,
@@ -443,8 +445,9 @@ allGr_p
 
 ggsave('analysis/figures/UC_SiteSchematic.pdf',
        allGr_p,
-       width = 12,
-       height = 5)
+       width = 8,
+       height = 6,
+       dpi = 600)
 
 
 #--------------------------------------------------
@@ -452,7 +455,7 @@ ggsave('analysis/figures/UC_SiteSchematic.pdf',
 set.seed(8)
 # l = igraph::layout_with_fr(myGraph)
 # l = igraph::layout_with_kk(myGraph)
-# l = igraph::layout_with_dh(myGraph)
+l = igraph::layout_with_dh(myGraph)
 # l = igraph::layout_with_gem(myGraph)
 # l = igraph::layout_nicely(myGraph)
 # l = igraph::layout_on_grid(myGraph)
@@ -460,6 +463,7 @@ set.seed(8)
 # l = igraph::layout_with_graphopt(myGraph)
 # l = igraph::layout_with_sugiyama(myGraph)
 l = igraph::layout_as_tree(myGraph,
+                           circular = T,
                            flip.y = F)
 
 # l = igraph::layout_with_lgl(myGraph,
@@ -488,18 +492,55 @@ prd_sites = nplot(myGraph,
                   layout = l,
                   vertex.color = myColors[nodes$Group],
                   # vertex.color = myColors[nodes$nodeType],
-                  # vertex.size = 1,
-                  vertex.size.range = c(0.1, 0.03),
-                  vertex.nsides = c(100, 3, 4, 4)[nodes$nodeType],
-                  vertex.rot = c(0, 1.55, 0.78, 0.78)[nodes$nodeType],
+                  vertex.size = 1,
+                  # vertex.size.range = c(0.1, 0.03),
+                  # vertex.nsides = c(100, 3, 4, 4)[nodes$nodeType],
+                  vertex.nsides = 100,
+                  # vertex.rot = c(0, 1.55, 0.78, 0.78)[nodes$nodeType],
                   vertex.label = nodes$label,
                   vertex.label.fontsize = 5,
                   edge.curvature = pi/6,
                   zero.margins = T)
 prd_sites
 
-pdf('analysis/figures/UC_SiteSchematic_v2.pdf',
-    width = 6,
+pdf('analysis/figures/UC_SiteSchematic_v3.pdf',
+    width = 8,
     height = 6)
 print(prd_sites)
 dev.off()
+
+#--------------------------------------------------
+# igraph
+library(igraph)
+l = igraph::layout_as_tree(myGraph,
+                           flip.y = F)
+
+# set of colors
+myColors = RColorBrewer::brewer.pal(nlevels(nodes$Group), 'Set1')
+# myColors = viridis::plasma(nlevels(nodes$Group))
+# myColors = viridis::viridis(nlevels(nodes$Group))
+# myColors = gray.colors(nlevels(nodes$Group), start = 0.3, end = 0.9)
+# myColors = c(rep('darkgray', 3), 'black')
+
+# this will open up a Quartz window and let you edit the layout with your mouse
+id = tkplot(myGraph,
+            layout = l,
+            canvas.width = 1400,
+            canvas.height = 800,
+            vertex.color = myColors[nodes$Group],
+            # vertex.color = myColors[nodes$nodeType],
+            # vertex.color = 'gray90',
+            vertex.shape = c('circle', 'square')[1],
+            # vertex.shape = c('circle', 'diamond', 'square', 'square')[nodes$nodeType],
+            vertex.size = 16,
+            # label = nodes$label,
+            label.size = 1,
+            label.color = 'red',
+            edge.color = 'black')
+
+# for saving
+tk_postscript(tkp.id = id)
+
+tk_close(tkp.id = id)
+tk_off()
+
