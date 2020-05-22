@@ -104,6 +104,13 @@ all_proc_ch = 2011:2019 %>%
            return(proc_list$ProcCapHist)
          })
 
+all_proc_ch %>%
+  group_by(Year) %>%
+  summarise(n_tot_tags = n_distinct(TagID),
+            n_weird_tags = n_distinct(TagID[UserProcStatus == '']),
+            perc_weird = n_weird_tags / n_tot_tags)
+
+
 site_df %>%
   select(SiteID) %>%
   anti_join(all_proc_ch %>%
