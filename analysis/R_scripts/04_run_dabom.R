@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: prep and run DABOM
 # Created: 4/1/20
-# Last Modified: 4/28/20
+# Last Modified: 5/28/20
 # Notes:
 
 #-----------------------------------------------------------------
@@ -21,7 +21,7 @@ library(lubridate)
 # Load required DABOM data
 #-----------------------------------------------------------------
 # set year
-yr = 2011
+yr = 2012
 
 load(paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
 
