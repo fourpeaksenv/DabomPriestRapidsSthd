@@ -9,8 +9,8 @@
 library(PITcleanr)
 library(DABOM)
 library(tidyverse)
-# library(jagsUI)
-library(rjags)
+library(jagsUI)
+# library(rjags)
 library(magrittr)
 library(lubridate)
 
@@ -32,20 +32,6 @@ proc_ch <- proc_list$ProcCapHist %>%
                                   AutoProcStatus,
                                   UserProcStatus)) %>%
   filter(UserProcStatus)
-
-# proc_ch %<>%
-#   # filter out ghost tag detections after Sept 30
-#   filter(ObsDate > lubridate::ymd(paste(yr, '0930'))) %>%
-#   select(TagID) %>%
-#   distinct() %>%
-#   left_join(proc_ch) %>%
-#   select(TagID, ObsDate, SiteID, Node, AutoProcStatus, UserProcStatus)
-
-
-# # filter out ghost tag detections after Sept 30
-# proc_ch %>%
-#   filter(ObsDate > lubridate::ymd(paste(yr, '0930'))) %>%
-#   xtabs(~ UserProcStatus, .)
 
 # file path to the default and initial model
 basic_modNm = 'analysis/model_files/PRD_DABOM.txt'
@@ -100,11 +86,11 @@ dabom_list$fishOrigin = dabom_df %>%
                          'H' = 2)) %>%
   pull(Origin)
 
-table(is.na(dabom_list$fishOrigin))
+table(!is.na(dabom_list$fishOrigin))
 
 # Creates a function to spit out initial values for MCMC chains
 # n_branch_list = setBranchNums(parent_child)
-n_branch_list2 = setBranchNums_PRA()
+n_branch_list = setBranchNums_PRA()
 
 init_fnc = setInitialValues_PRA(dabom_list)
 
@@ -129,40 +115,40 @@ jags_params = setSavedParams(model_file = mod_path)
 # ( 4*(5000-2500) ) / 10 = 1000 samples
 
 set.seed(12)
-# dabom_mod <- jags.basic(data = jags_data,
-#                         inits = init_fnc,
-#                         parameters.to.save = jags_params,
-#                         model.file = mod_path,
-#                         n.chains = 4,
-#                         n.iter = 5000,
-#                         n.burnin = 2500,
-#                         n.thin = 10,
-#                         # n.chains = 1,
-#                         # n.iter = 2,
-#                         # n.burnin = 1,
-#                         # parallel = T,
-#                         DIC = T)
+dabom_mod <- jags.basic(data = jags_data,
+                        inits = init_fnc,
+                        parameters.to.save = jags_params,
+                        model.file = mod_path,
+                        n.chains = 4,
+                        n.iter = 5000,
+                        n.burnin = 2500,
+                        n.thin = 10,
+                        # n.chains = 1,
+                        # n.iter = 2,
+                        # n.burnin = 1,
+                        # parallel = T,
+                        DIC = T)
 
-set.seed(12)
-# adaptation phase
-jags = jags.model(mod_path,
-                  data = jags_data,
-                  inits = init_fnc,
-                  n.chains = 4,
-                  n.adapt = 1000)
-# burn-in
-update(jags,
-       n.iter = 2500)
-# posterior samples
-dabom_mod = coda.samples(jags,
-                         jags_params,
-                         n.iter = 2500,
-                         thin = 10)
+# set.seed(12)
+# # adaptation phase
+# jags = jags.model(mod_path,
+#                   data = jags_data,
+#                   inits = init_fnc,
+#                   n.chains = 4,
+#                   n.adapt = 1000)
+# # burn-in
+# update(jags,
+#        n.iter = 2500)
+# # posterior samples
+# dabom_mod = coda.samples(jags,
+#                          jags_params,
+#                          n.iter = 2500,
+#                          thin = 10)
 
 # save some stuff
 proc_list[["proc_ch"]] <- proc_ch
 
-save(dabom_mod, dabom_list, proc_list, parent_child,
+save(dabom_mod, dabom_list, proc_list, parent_child, bio_df,
      file = paste0("analysis/data/derived_data/model_fits/PRA_Steelhead_", yr,'_DABOM.rda'))
 
 
@@ -181,8 +167,8 @@ my_mod = dabom_mod
 
 #---------------------------------------
 # using mcmcr
-anyNA(my_mod)
-my_mcmcr = as.mcmcr(my_mod)
+anyNA(dabom_mod)
+my_mcmcr = as.mcmcr(dabom_mod)
 
 # get Rhat statistics for all parameters
 rhat_df = rhat(my_mcmcr,
