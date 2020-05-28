@@ -21,26 +21,29 @@ library(coda)
 # set species
 spp = "Steelhead"
 # set year
-yr = 2019
+yr = 2011
 
 for(yr in 2011:2019) {
 #-----------------------------------------------------------------
 # load JAGS MCMC results
 load(paste0("analysis/data/derived_data/model_fits/PRA_", spp, "_", yr,'_DABOM.rda'))
 
-file_nms = list.files('analysis/data/derived_data')
-bio_nm = file_nms[grepl('Bio', file_nms) & grepl('.rds$', file_nms)]
+# file_nms = list.files('analysis/data/derived_data')
+# bio_nm = file_nms[grepl('Bio', file_nms) & grepl('.rds$', file_nms)]
 
-bio_df = read_rds(paste0('analysis/data/derived_data/', bio_nm)) %>%
-  filter(Year == yr,
-         TagID %in% unique(proc_list$ProcCapHist$TagID))
+# bio_df = read_rds(paste0('analysis/data/derived_data/', bio_nm)) %>%
+#   filter(Year == yr,
+#          TagID %in% unique(proc_list$ProcCapHist$TagID))
 
 # estimate final spawning location
-tag_summ = summariseTagData(proc_list$ProcCapHist %>%
+tag_summ = summariseTagData(proc_list$proc_ch %>%
                               select(-Group) %>%
                               left_join(proc_list$NodeOrder %>%
                                           select(Node, Group)),
-                            trap_data = bio_df) %>%
+                            trap_data = bio_df %>%
+                              filter(TagID %in% unique(proc_list$proc_ch$TagID)) %>%
+                              group_by(TagID) %>%
+                              slice(1)) %>%
   mutate(Group = fct_explicit_na(Group))
 
 
@@ -51,9 +54,10 @@ tag_summ %>%
 
 # summarise detection probabilities
 detect_summ = summariseDetectProbs(dabom_mod = dabom_mod,
-                                   capHist_proc = proc_list$ProcCapHist %>%
+                                   capHist_proc = proc_list$proc_ch %>%
                                      filter(UserProcStatus)) %>%
   filter(!is.na(mean))
+
 
 # which sites had detection probabilities fixed at 0% or 100%
 detect_summ %>%
@@ -92,9 +96,8 @@ tot_win_cnt = getWindowCounts(dam = 'PRD',
                             start_date = paste0(yr-1, '0601'),
                             end_date = paste0(yr, '0531')) %>%
   summarise_at(vars(win_cnt),
-               funs(sum)) %>%
-  as.matrix() %>%
-  as.integer()
+               list(sum)) %>%
+  pull(win_cnt)
 
 # reascension data
 reasc_data = queryPITtagData(damPIT = 'PRA',
@@ -114,7 +117,7 @@ tot_escape = reasc_data %>%
   ungroup() %>%
   group_by(Species, SpawnYear) %>%
   summarise_at(vars(matches('tags')),
-               funs(sum),
+               list(sum),
                na.rm = T) %>%
   ungroup() %>%
   mutate(reascRate = reascent_tags / tot_tags,
@@ -125,15 +128,15 @@ tot_escape = reasc_data %>%
   bind_cols(bio_df %>%
               group_by(Origin) %>%
               summarise(nTags = n_distinct(TagID)) %>%
-              spread(Origin, nTags,
-                     fill = as.integer(0)) %>%
+              pivot_wider(names_from = "Origin",
+                          values_from = "nTags",
+                          values_fill = list(nTags = as.integer(0))) %>%
               ungroup() %>%
               mutate(propW = W / (W + H),
                      propH = 1 - propW,
                      propOrgSE = sqrt((propW * (1 - propW)) / (W + H))))
 
-
-org_escape_tmp = tot_escape %>%
+org_escape = tot_escape %>%
   mutate(Hescp = propH * adjWinCnt,
          HescpSE = deltamethod(~ x1 * x2,
                                mean = c(propH, adjWinCnt),
@@ -142,24 +145,21 @@ org_escape_tmp = tot_escape %>%
          WescpSE = deltamethod(~ x1 * x2,
                                mean = c(propW, adjWinCnt),
                                cov = diag(c(propOrgSE, adjWinCntSE)^2))) %>%
-  select(Species, SpawnYear, matches('escp'))
+  select(Species, SpawnYear, matches('escp')) %>%
+  pivot_longer(-(Species:SpawnYear),
+               names_to = "var",
+               values_to = "value") %>%
+  mutate(Origin = if_else(grepl('^H', var),
+                          'Hatchery',
+                          'Natural'),
+         param = if_else(grepl('SE$', var),
+                         'tot_escp_se',
+                         'tot_escp')) %>%
+  select(-var) %>%
+  pivot_wider(names_from = "param",
+              values_from = "value")
 
-org_escape = org_escape_tmp %>%
-  gather(var, value, -(Species:SpawnYear)) %>%
-  filter(!grepl('SE', var)) %>%
-  rename(Origin = var,
-         tot_escp = value) %>%
-  mutate(Origin = recode(Origin,
-                         'Hescp' = 'Hatchery',
-                         'Wescp' = 'Natural')) %>%
-  left_join(org_escape_tmp %>%
-              gather(var, value, -(Species:SpawnYear)) %>%
-              filter(grepl('SE', var)) %>%
-              rename(Origin = var,
-                     tot_escp_se = value) %>%
-              mutate(Origin = recode(Origin,
-                                     'HescpSE' = 'Hatchery',
-                                     'WescpSE' = 'Natural')))
+
 
 #-----------------------------------------------------------------
 # translate movement estimates to escapement
@@ -177,7 +177,7 @@ escape_summ = org_escape %>%
   split(list(.$Origin)) %>%
   map_df(.id = 'Origin',
          .f = function(x) {
-           tibble(totEsc = rnorm(n_samps, x$TotEscp, x$TotEscpSE)) %>%
+           tibble(totEsc = rnorm(n_samps, x$tot_escp, x$tot_escp_se)) %>%
              mutate(iter = 1:n_samps)
          }) %>%
   left_join(trans_df %>%
@@ -212,7 +212,8 @@ pop_summ = escape_summ %>%
                              'past_OKL' = 'Okanogan',
                              'dwnStrm' = 'BelowPriest',
                              'WEA_bb' = 'WellsPool')) %>%
-  arrange(Origin, Population)
+  arrange(Origin, Population) %>%
+  select(Origin, Population, everything(), -param)
 
 #-----------------------------------------------------------------
 # combine biological data with escapement estimates
@@ -240,7 +241,7 @@ bioSumm = tag_summ %>%
          propSE = sqrt((prop * (1 - prop)) / (totTags))) %>%
   mutate(Stream = as.character(Stream)) %>%
   select(Stream, Origin, totTags, Sex, Age, nTags, prop, propSE, meanFL) %>%
-  arrange(Stream, Origin, Sex, Age)
+  arrange(desc(Stream), Origin, Sex, Age)
 
 fullSumm = pop_summ %>%
   mutate(Origin = recode(Origin,
@@ -248,7 +249,9 @@ fullSumm = pop_summ %>%
                          'Hatchery' = 'H')) %>%
   mutate(Species = spp,
          SpawnYear = yr) %>%
-  select(Species, SpawnYear, Population, Origin, Escape, EscSE) %>%
+  select(Species, SpawnYear, Population, Origin,
+         Escape = mean,
+         EscSE = sd) %>%
   left_join(bioSumm) %>%
   rowwise() %>%
   mutate(Est = Escape * prop,
@@ -296,14 +299,17 @@ bio_list = list('Origin' = tag_summ %>%
                  select(Group, Origin, total_aged,
                         # not_aged = `<NA>`,
                         everything()) %>%
-                 mutate_at(vars(total_aged:`5`),
-                           funs(as.integer)))
+                 mutate_at(vars(-(Group:Origin)),
+                           list(as.integer)))
 
 #-----------------------------------------------------------------
 # write results to an Excel file
 save_list = c(list('Population Escapement' = pop_summ %>%
                      select(-skew, -kurtosis) %>%
-                     mutate_at(vars(mean:upperCI),
+                     mutate_at(vars(mean:mode),
+                               list(round),
+                               digits = 0) %>%
+                     mutate_at(vars(sd:upperCI),
                                list(round),
                                digits = 1) %>%
                      rename(estimate = mean,
@@ -311,7 +317,10 @@ save_list = c(list('Population Escapement' = pop_summ %>%
                      select(-median, -mode),
                    'All Escapement' = escape_summ %>%
                      select(-skew, -kurtosis) %>%
-                     mutate_at(vars(mean:upperCI),
+                     mutate_at(vars(mean:mode),
+                               list(round),
+                               digits = 0) %>%
+                     mutate_at(vars(sd:upperCI),
                                list(round),
                                digits = 1) %>%
                      rename(estimate = mean,
