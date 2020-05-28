@@ -194,13 +194,30 @@ convg_df = converged(my_mcmcr,
                      by = 'parameter',
                      as_df = T)
 
+convg_df = rhat(my_mcmcr,
+                by = 'term',
+                as_df = T) %>%
+  mutate(type = if_else(grepl('_p$', term),
+                        'Detection',
+                        if_else(grepl('^p_pop', term) |
+                                  grepl('^phi', term),
+                                'Movement',
+                                'Other'))) %>%
+  select(type, everything()) %>%
+  left_join(esr(my_mcmcr,
+                by = 'term',
+                as_df = T)) %>%
+  # which parameters have converged and which haven't?
+  left_join(converged(my_mcmcr,
+                      by = 'term',
+                      as_df = T))
+
 janitor::tabyl(convg_df,
                converged)
 
 # look at parameters that have not converged
 convg_df %>%
-  filter(!converged) %>%
-  left_join(rhat_df)
+  filter(!converged)
 
 #---------------------------------------
 # using postpack
