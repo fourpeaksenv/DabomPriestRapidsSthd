@@ -23,6 +23,9 @@ library(lubridate)
 # set year
 yr = 2012
 
+for(yr in 2013:2019) {
+  cat(paste('Working on', yr, '\n'))
+
 load(paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
 
 proc_ch <- proc_list$ProcCapHist %>%
@@ -151,7 +154,10 @@ proc_list[["proc_ch"]] <- proc_ch
 save(dabom_mod, dabom_list, proc_list, parent_child, bio_df,
      file = paste0("analysis/data/derived_data/model_fits/PRA_Steelhead_", yr,'_DABOM.rda'))
 
+rm(dabom_mod, dabom_list, proc_list, parent_child, bio_df,
+   proc_ch, jags_data, init_fnc, mod_path, )
 
+}
 
 #------------------------------------------------------------------------------
 # diagnostics
