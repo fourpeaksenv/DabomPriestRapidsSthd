@@ -23,6 +23,14 @@ for(yr in 2011:2019) {
   # start date is June 1 of the previous year
   start_date = paste0(yr - 1, '0601')
 
+  # ensure that WVT nodes are included, even after antennas disappeared (configID >= 170, yr >= 2019)
+  if(yr >= 2019) {
+    configuration %<>%
+      mutate(EndDate = if_else(grepl('WVT', Node),
+                               NA_POSIXct_,
+                               EndDate))
+  }
+
   # build parent-child table
   parent_child = createParentChildDf(site_df,
                                      configuration,
@@ -81,6 +89,32 @@ for(yr in 2011:2019) {
     distinct()
 
   proc_list$NodeOrder = node_order
+
+  # fix a couple detections (not caught by PITcleanr)
+  if(yr == 2013) {
+    proc_list$ProcCapHist %<>%
+      mutate_at(vars(AutoProcStatus),
+                list(as.character)) %>%
+      mutate_at(vars(AutoProcStatus, UserProcStatus),
+                list(~ if_else(TagID == "3D9.1C2DF7373B" & grepl('ENA', Node),
+                               as.character(FALSE),
+                               .))) %>%
+      mutate_at(vars(AutoProcStatus),
+                list(as.logical))
+  }
+
+  if(yr == 2019) {
+    proc_list$ProcCapHist %<>%
+      mutate_at(vars(AutoProcStatus),
+                list(as.character)) %>%
+      mutate_at(vars(AutoProcStatus, UserProcStatus),
+                list(~ if_else(TagID == "3D9.1C2DF7373B" & grepl('ENA', Node),
+                               as.character(FALSE),
+                               .))) %>%
+      mutate_at(vars(AutoProcStatus),
+                list(as.logical))
+  }
+
 
   # save some stuff
   save(yr, start_date, parent_child, proc_list,
