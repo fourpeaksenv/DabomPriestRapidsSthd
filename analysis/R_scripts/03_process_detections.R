@@ -17,7 +17,7 @@ library(magrittr)
 load('analysis/data/derived_data/site_config.rda')
 
 # which spawn year are we dealing with?
-yr = 2015
+yr = 2019
 
 for(yr in 2011:2019) {
   # start date is June 1 of the previous year
@@ -108,7 +108,7 @@ for(yr in 2011:2019) {
       mutate_at(vars(AutoProcStatus),
                 list(as.character)) %>%
       mutate_at(vars(AutoProcStatus, UserProcStatus),
-                list(~ if_else(TagID == "3D9.1C2DF7373B" & grepl('ENA', Node),
+                list(~ if_else(TagID == "3DD.0077A0D6E8" & grepl('ENA', Node),
                                as.character(FALSE),
                                .))) %>%
       mutate_at(vars(AutoProcStatus),
