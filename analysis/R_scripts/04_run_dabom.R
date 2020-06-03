@@ -21,9 +21,9 @@ library(lubridate)
 # Load required DABOM data
 #-----------------------------------------------------------------
 # set year
-yr = 2012
+yr = 2019
 
-for(yr in 2013:2019) {
+for(yr in 2016:2019) {
   cat(paste('Working on', yr, '\n'))
 
   load(paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
@@ -129,7 +129,7 @@ for(yr in 2013:2019) {
                           # n.chains = 1,
                           # n.iter = 2,
                           # n.burnin = 1,
-                          # parallel = T,
+                          parallel = F,
                           DIC = T)
 
   # set.seed(12)
@@ -155,9 +155,13 @@ for(yr in 2013:2019) {
        file = paste0("analysis/data/derived_data/model_fits/PRA_Steelhead_", yr,'_DABOM.rda'))
 
   rm(dabom_mod, dabom_list, proc_list, parent_child, bio_df,
-     proc_ch, jags_data, init_fnc, mod_path, )
+     proc_ch, jags_data, init_fnc, mod_path, dabom_df, start_date, jags_params)
 
 }
+
+# Errors:
+# 2015: Error in node a_RIA[2819], Cannot normalize density
+# 2018: Error in node a_RIA[481], Cannot normalize density
 
 #------------------------------------------------------------------------------
 # diagnostics
