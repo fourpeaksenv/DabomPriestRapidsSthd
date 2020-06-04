@@ -159,10 +159,6 @@ for(yr in 2016:2019) {
 
 }
 
-# Errors:
-# 2015: Error in node a_RIA[2819], Cannot normalize density
-# 2018: Error in node a_RIA[481], Cannot normalize density
-
 #------------------------------------------------------------------------------
 # diagnostics
 #------------------------------------------------------------------------------
