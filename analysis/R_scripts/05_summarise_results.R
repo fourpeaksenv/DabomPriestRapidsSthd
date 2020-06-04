@@ -21,7 +21,7 @@ library(coda)
 # set species
 spp = "Steelhead"
 # set year
-yr = 2011
+yr = 2019
 
 for(yr in 2011:2019) {
 #-----------------------------------------------------------------
