@@ -10,21 +10,29 @@ knitr::opts_chunk$set(
   comment = "#>",
   fig.path = "README-"
 )
-# Please put your title here to include it in the file below.
-Title <- "Title of your paper goes here"
+
+# Please put your manuscript info here to include it in the file below.
+Title <- "A Bayesian nested patch occupancy model to estimate steelhead movement and abundance"
+Author <- "Waterhouse, L., White, J., See, K.E., Murdoch, A. R. and Semmens, B.X."
+Year <- 2020
+Journal <- "Ecological Applications"
 ```
 
 # DabomPriestRapidsSthd
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/KevinSee/DabomPriestRapidsSthd/master?urlpath=rstudio)
 
-This repository contains the data and code for running the **D**am **A**dult **B**ranch **O**ccupancy **M**odel ([DABOM](https://github.com/KevinSee/DABOM)) for adult steelhead returning above Priest Rapids Dam in the Upper Columbia River. 
+This repository contains the data and code for running the **D**am **A**dult **B**ranch **O**ccupancy **M**odel ([DABOM](https://github.com/KevinSee/DABOM)) for adult steelhead returning above Priest Rapids Dam in the Upper Columbia River. This model estimates escapement past various locations in the Upper Columbia using detections of PIT tagged fish. The full methods are described in the paper:
+
+> `r Author`, (`r Year`). _`r Title`_. `r Journal`  <https://doi.org/xxx/xxx>
+
+The most recent estimates for various spawn years can be found in the "outgoing/estimates" folder that is available after cloning or downloading this compendium. There is a manual describing the step-by-step instructions to generate these results, found in the "analysis/paper" folder. 
 
 ### How to cite
 
 Please cite this compendium as:
 
-> Authors, (`r format(Sys.Date(), "%Y")`). _Compendium of R code and data for `r Title`_. Accessed `r format(Sys.Date(), "%d %b %Y")`. Online at <https://doi.org/xxx/xxx>
+> See, K.E., (`r format(Sys.Date(), "%Y")`). _Compendium of R code and data for Upper Columbia DABOM Steelhead_. Accessed `r format(Sys.Date(), "%d %b %Y")`. Online at <https://doi.org/xxx/xxx>
 
 ### How to download or install
 

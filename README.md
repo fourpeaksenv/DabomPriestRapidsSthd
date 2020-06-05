@@ -8,14 +8,28 @@
 This repository contains the data and code for running the **D**am
 **A**dult **B**ranch **O**ccupancy **M**odel
 ([DABOM](https://github.com/KevinSee/DABOM)) for adult steelhead
-returning above Priest Rapids Dam in the Upper Columbia River.
+returning above Priest Rapids Dam in the Upper Columbia River. This
+model estimates escapement past various locations in the Upper Columbia
+using detections of PIT tagged fish. The full methods are described in
+the paper:
+
+> Waterhouse, L., White, J., See, K.E., Murdoch, A. R. and Semmens,
+> B.X., (2020). *A Bayesian nested patch occupancy model to estimate
+> steelhead movement and abundance*. Ecological Applications
+> <https://doi.org/xxx/xxx>
+
+The most recent estimates for various spawn years can be found in the
+“outgoing/estimates” folder that is available after cloning or
+downloading this compendium. There is a manual describing the
+step-by-step instructions to generate these results, found in the
+“analysis/paper” folder.
 
 ### How to cite
 
 Please cite this compendium as:
 
-> Authors, (2020). *Compendium of R code and data for Title of your
-> paper goes here*. Accessed 27 Apr 2020. Online at
+> See, K.E., (2020). *Compendium of R code and data for Upper Columbia
+> DABOM Steelhead*. Accessed 05 Jun 2020. Online at
 > <https://doi.org/xxx/xxx>
 
 ### How to download or install
