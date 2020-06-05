@@ -32,7 +32,7 @@ Please cite this compendium as:
 
 > See, K.E., (2020). *Compendium of R code and data for Upper Columbia
 > DABOM Steelhead*. Accessed 05 Jun 2020. Online at
-> <https://doi.org/xxx/xxx>
+> <https://doi.org/10.5281/zenodo.3879649>
 
 ### How to download or install
 

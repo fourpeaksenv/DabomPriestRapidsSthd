@@ -34,7 +34,7 @@ The most recent estimates for various spawn years can be found in the "outgoing/
 
 Please cite this compendium as:
 
-> See, K.E., (`r format(Sys.Date(), "%Y")`). _Compendium of R code and data for Upper Columbia DABOM Steelhead_. Accessed `r format(Sys.Date(), "%d %b %Y")`. Online at <https://doi.org/xxx/xxx>
+> See, K.E., (`r format(Sys.Date(), "%Y")`). _Compendium of R code and data for Upper Columbia DABOM Steelhead_. Accessed `r format(Sys.Date(), "%d %b %Y")`. Online at <https://doi.org/10.5281/zenodo.3879649>
 
 ### How to download or install
 
