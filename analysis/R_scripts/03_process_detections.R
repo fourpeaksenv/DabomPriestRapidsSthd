@@ -66,7 +66,7 @@ for(yr in 2011:2019) {
     rm(clk_obs)
   }
 
-  # process those observations with PITcleanr, using Tumwater-specific function
+  # process those observations with PITcleanr, using Priest Rapids-specific function
   proc_list = processCapHist_PRD(startDate = start_date,
                                  configuration = configuration,
                                  parent_child = parent_child,
