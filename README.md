@@ -3,6 +3,8 @@
 
 # DabomPriestRapidsSthd
 
+[![DOI](https://zenodo.org/badge/259480274.svg)](https://zenodo.org/badge/latestdoi/259480274)
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/KevinSee/DabomPriestRapidsSthd/master?urlpath=rstudio)
 
 This repository contains the data and code for running the **D**am
