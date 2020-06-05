@@ -34,7 +34,8 @@ for(yr in 2016:2019) {
     mutate(UserProcStatus = if_else(is.na(UserProcStatus),
                                     AutoProcStatus,
                                     UserProcStatus)) %>%
-    filter(UserProcStatus)
+    filter(UserProcStatus) %>%
+    filter(TagID %in% unique(bio_df$TagID))
 
   # file path to the default and initial model
   basic_modNm = 'analysis/model_files/PRD_DABOM.txt'
@@ -68,8 +69,7 @@ for(yr in 2016:2019) {
   bio_df = read_rds(paste0('analysis/data/derived_data/', bio_nm)) %>%
     filter(Year == yr)
 
-  dabom_df = createDABOMcapHist(proc_ch %>%
-                                  filter(TagID %in% bio_df$TagID),
+  dabom_df = createDABOMcapHist(proc_ch,
                                 proc_list$NodeOrder,
                                 split_matrices = F) %>%
     # add origin information
@@ -78,8 +78,7 @@ for(yr in 2016:2019) {
                 distinct()) %>%
     select(TagID, Origin, everything())
 
-  dabom_list = createDABOMcapHist(proc_ch %>%
-                                    filter(TagID %in% bio_df$TagID),
+  dabom_list = createDABOMcapHist(proc_ch,
                                   proc_list$NodeOrder,
                                   split_matrices = T)
 
