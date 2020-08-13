@@ -18,7 +18,7 @@ the paper:
 > Waterhouse, L., White, J., See, K.E., Murdoch, A. R. and Semmens,
 > B.X., (2020). *A Bayesian nested patch occupancy model to estimate
 > steelhead movement and abundance*. Ecological Applications
-> <https://doi.org/xxx/xxx>
+> <https://doi.org/10.1002/eap.2202>
 
 The most recent estimates for various spawn years can be found in the
 “outgoing/estimates” folder that is available after cloning or
@@ -31,7 +31,7 @@ step-by-step instructions to generate these results, found in the
 Please cite this compendium as:
 
 > See, K.E., (2020). *Compendium of R code and data for Upper Columbia
-> DABOM Steelhead*. Accessed 05 Jun 2020. Online at
+> DABOM Steelhead*. Accessed 13 Aug 2020. Online at
 > <https://doi.org/10.5281/zenodo.3879649>
 
 ### How to download or install

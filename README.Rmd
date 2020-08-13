@@ -26,7 +26,7 @@ Journal <- "Ecological Applications"
 
 This repository contains the data and code for running the **D**am **A**dult **B**ranch **O**ccupancy **M**odel ([DABOM](https://github.com/KevinSee/DABOM)) for adult steelhead returning above Priest Rapids Dam in the Upper Columbia River. This model estimates escapement past various locations in the Upper Columbia using detections of PIT tagged fish. The full methods are described in the paper:
 
-> `r Author`, (`r Year`). _`r Title`_. `r Journal`  <https://doi.org/xxx/xxx>
+> `r Author`, (`r Year`). _`r Title`_. `r Journal`  <https://doi.org/10.1002/eap.2202>
 
 The most recent estimates for various spawn years can be found in the "outgoing/estimates" folder that is available after cloning or downloading this compendium. There is a manual describing the step-by-step instructions to generate these results, found in the "analysis/paper" folder. 
 
