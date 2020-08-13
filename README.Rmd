@@ -22,7 +22,7 @@ Journal <- "Ecological Applications"
 
 [![DOI](https://zenodo.org/badge/259480274.svg)](https://zenodo.org/badge/latestdoi/259480274)
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/KevinSee/DabomPriestRapidsSthd/master?urlpath=rstudio)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/BiomarkABS/DabomPriestRapidsSthd/master?urlpath=rstudio)
 
 This repository contains the data and code for running the **D**am **A**dult **B**ranch **O**ccupancy **M**odel ([DABOM](https://github.com/KevinSee/DABOM)) for adult steelhead returning above Priest Rapids Dam in the Upper Columbia River. This model estimates escapement past various locations in the Upper Columbia using detections of PIT tagged fish. The full methods are described in the paper:
 
@@ -38,14 +38,14 @@ Please cite this compendium as:
 
 ### How to download or install
 
-You can download the compendium as a zip from from this URL: <https://github.com/KevinSee/DabomPriestRapidsSthd/archive/master.zip>
+You can download the compendium as a zip from from this URL: <https://github.com/BiomarkABS/DabomPriestRapidsSthd/archive/master.zip>
 
 Or you can install this compendium as an R package, DabomPriestRapidsSthd, from GitHub with:
 
 
 ```{r gh-installation, eval = FALSE}
 # install.packages("devtools")
-remotes::install_github("KevinSee/DabomPriestRapidsSthd")
+remotes::install_github("BiomarkABS/DabomPriestRapidsSthd")
 ```
 
 
