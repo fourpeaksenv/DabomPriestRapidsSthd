@@ -1,6 +1,7 @@
 .Rproj.user
 .Rhistory
 .RData
+*.Rapp.history
 
 # ignore temporary files when documents are open
 ~$*
