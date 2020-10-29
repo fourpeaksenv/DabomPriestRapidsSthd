@@ -12,7 +12,8 @@ library(tidyverse)
 # library(jagsUI)
 library(STADEM)
 library(readxl)
-library(WriteXLS)
+# library(WriteXLS)
+library(openxlsx)
 library(msm)
 library(moments)
 library(coda)
@@ -329,10 +330,16 @@ for(yr in 2011:2019) {
                      'Biological Summary' = fullSumm),
                 bio_list)
 
-  WriteXLS(x = save_list,
-           ExcelFileName = paste0('outgoing/estimates/PRA_', spp, '_', yr, '_', format(Sys.Date(), '%Y%m%d'), '.xlsx'),
-           AdjWidth = T,
-           AutoFilter = F,
-           BoldHeaderRow = T,
-           FreezeRow = 1)
+  # WriteXLS(x = save_list,
+  #          ExcelFileName = paste0('outgoing/estimates/PRA_', spp, '_', yr, '_', format(Sys.Date(), '%Y%m%d'), '.xlsx'),
+  #          AdjWidth = T,
+  #          AutoFilter = F,
+  #          BoldHeaderRow = T,
+  #          FreezeRow = 1)
+
+  # using a different package to write to Excel
+  openxlsx::write.xlsx(x = save_list,
+                       file = paste0('outgoing/estimates/PRA_', spp, '_', yr, '_', format(Sys.Date(), '%Y%m%d'), '.xlsx'),
+                       firstRow = T,
+                       headerStyle = openxlsx::createStyle(textDecoration = "BOLD"))
 }
