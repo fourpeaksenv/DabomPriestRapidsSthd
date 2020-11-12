@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: clean PTAGIS data with PITcleanr
 # Created: 4/27/20
-# Last Modified: 5/22/20
+# Last Modified: 11/12/20
 # Notes:
 
 #-----------------------------------------------------------------
@@ -17,9 +17,9 @@ library(magrittr)
 load('analysis/data/derived_data/site_config.rda')
 
 # which spawn year are we dealing with?
-yr = 2019
+yr = 2020
 
-for(yr in 2011:2019) {
+# for(yr in 2011:2020) {
   # start date is June 1 of the previous year
   start_date = paste0(yr - 1, '0601')
 
@@ -78,7 +78,16 @@ for(yr in 2011:2019) {
                                  save_file = T,
                                  file_name = paste0('outgoing/PITcleanr/UC_Steelhead_', yr, '.xlsx'))
 
-  # create node order and list of nodes within sevaral population groups
+
+  # how many tags need to be examined for "weird" capture histories?
+  proc_list$ProcCapHist %>%
+    select(TagID, UserProcStatus) %>%
+    distinct() %>%
+    janitor::tabyl(UserProcStatus) %>%
+    janitor::adorn_totals() %>%
+    janitor::adorn_pct_formatting()
+
+  # create node order and list of nodes within several population groups
   node_order = createNodeOrder(proc_list$ValidPaths,
                                configuration) %>%
     left_join(stack(site_list) %>%
@@ -119,7 +128,7 @@ for(yr in 2011:2019) {
   # save some stuff
   save(yr, start_date, parent_child, proc_list,
        file = paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
-}
+# }
 
 #-------------------------------------------
 # NEXT STEPS
