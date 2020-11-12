@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: create tag lists to feed to PTAGIS query
 # Created: 4/1/2020
-# Last Modified: 5/5/2020
+# Last Modified: 11/12/2020
 # Notes:
 
 #-----------------------------------------------------------------
@@ -12,7 +12,7 @@ library(readxl)
 library(lubridate)
 library(janitor)
 library(magrittr)
-library(WriteXLS)
+library(openxlsx)
 
 #-----------------------------------------------------------------
 # read in biological data from trap
@@ -65,11 +65,83 @@ bio_df = excel_sheets('analysis/data/raw_data/WDFW/PRD_BiologicalData_BY11-BY15.
   mutate(Age = str_replace(Age, '^r', 'R')) %>%
   arrange(Year, record_id, tag_loc)
 
+# any duplicated tags?
+bio_df %>%
+  filter(TagID %in% TagID[duplicated(TagID)]) %>%
+  arrange(Year, TagID, TrapDate, record_id) %>%
+  tabyl(Year)
+
+#-----------------------------------------------------------------
+# add 2020 bio data
+bio_2020 = read_csv('analysis/data/raw_data/WDFW/NBD-2019-189-PRD 1.csv') %>%
+  mutate(BroodYear = "BY20") %>%
+  mutate(Year = paste0("20", str_remove(BroodYear, "^BY")),
+         Year = as.numeric(Year)) %>%
+  mutate(Species = "ST") %>%
+  pivot_longer(cols = matches('^PIT'),
+               names_to = "tag_loc",
+               values_to = "TagID") %>%
+  filter(!is.na(TagID)) %>%
+  mutate(record_id = seq(from = max(bio_df$record_id) + 1,
+                         by = 1,
+                         length.out = n())) %>%
+  select(record_id,
+         BroodYear,
+         Year,
+         tag_loc,
+         TagID,
+         Species,
+         TrapDate = `Event Date`,
+         Sex,
+         Origin = `Final Origin`,
+         ForkLength = Length,
+         Age = `Scale Age`,
+         AdClip = `Adipose Clip`,
+         FinClip = `Fin Clip`,
+         CWT_snout = `CWT - Snout`,
+         CWT_body = `CWT - Body`) %>%
+  mutate(TrapDate = mdy_hm(TrapDate)) %>%
+  mutate(Age = str_replace(Age, '^r', 'R')) %>%
+  mutate(AdClip = if_else(!is.na(AdClip),
+                          "AD",
+                          NA_character_)) %>%
+  mutate(Sex = recode(Sex,
+                      "Female" = "F",
+                      "Male" = "M")) %>%
+  mutate(across(c(starts_with("CWT")),
+                ~ if_else(!is.na(.), T, F))) %>%
+  mutate(CWT = if_else(CWT_snout,
+                       "SN",
+                       if_else(CWT_body,
+                               "BD",
+                               NA_character_))) %>%
+  mutate(age_split = str_split(Age, "\\."),
+         FinalAge = map_dbl(age_split,
+                            .f = function(x) {
+                              sum(as.numeric(x[1]),
+                                  as.numeric(x[2]))
+                            })) %>%
+  select(all_of(names(bio_df)))
+
+# any duplicated tags?
+bio_2020 %>%
+  filter(TagID %in% TagID[duplicated(TagID)])
+
+#-----------------------------------------------------------------
+# add to overall list
+bio_df %<>%
+  bind_rows(bio_2020)
+
+#-----------------------------------------------------------------
 # save as Excel file
+#-----------------------------------------------------------------
 bio_df %>%
   split(list(.$Year)) %>%
-  WriteXLS('analysis/data/raw_data/WDFW/PRA_Sthd_BioData.xlsx')
+  write.xlsx(file = 'analysis/data/derived_data/PRA_Sthd_BioData.xlsx')
 
+#-----------------------------------------------------------------
+# for tag lists
+#-----------------------------------------------------------------
 # put bounds around years
 min_yr = min(bio_df$Year)
 max_yr = max(bio_df$Year)
@@ -80,7 +152,8 @@ tag_list = bio_df %>%
   split(list(.$Year)) %>%
   map(.f = function(x) {
     x %>%
-      select(TagID)
+      select(TagID) %>%
+      distinct()
   })
 
 # save tags to upload to PTAGIS
