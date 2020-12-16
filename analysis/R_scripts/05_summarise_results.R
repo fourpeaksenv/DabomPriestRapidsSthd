@@ -22,7 +22,7 @@ library(coda)
 # set species
 spp = "Steelhead"
 # set year
-yr = 2019
+yr = 2020
 
 for(yr in 2011:2019) {
   #-----------------------------------------------------------------
@@ -77,8 +77,8 @@ for(yr in 2011:2019) {
               kurtosis = moments::kurtosis(value),
               lowerCI = coda::HPDinterval(coda::as.mcmc(value))[,1],
               upperCI = coda::HPDinterval(coda::as.mcmc(value))[,2]) %>%
-    mutate_at(vars(mean, median, mode, sd, matches('CI$')),
-              list(~ if_else(. < 0, 0, .))) %>%
+    mutate(across(c(mean, median, mode, sd, matches('CI$')),
+              ~ if_else(. < 0, 0, .))) %>%
     ungroup()
 
   #-----------------------------------------------------------------
@@ -93,7 +93,7 @@ for(yr in 2011:2019) {
                  list(sum)) %>%
     pull(win_cnt)
 
-  # reascension data
+  # re-ascension data
   reasc_data = queryPITtagData(damPIT = 'PRA',
                                spp = spp,
                                start_date = paste0(yr-1, '0601'),
@@ -107,13 +107,13 @@ for(yr in 2011:2019) {
            ReAscent = ifelse(TagIDAscentCount > 1, T, F)) %>%
     group_by(Species, SpawnYear, Date) %>%
     summarise(tot_tags = n_distinct(TagID),
-              reascent_tags = n_distinct(TagID[ReAscent])) %>%
-    ungroup() %>%
+              reascent_tags = n_distinct(TagID[ReAscent]),
+              .groups = "drop") %>%
     group_by(Species, SpawnYear) %>%
-    summarise_at(vars(matches('tags')),
-                 list(sum),
-                 na.rm = T) %>%
-    ungroup() %>%
+    summarise(across(matches('tags'),
+                     sum,
+                     na.rm = T),
+              .groups = "drop") %>%
     mutate(reascRate = reascent_tags / tot_tags,
            reascRateSE = sqrt(reascRate * (1 - reascRate) / tot_tags),
            totWinCnt = tot_win_cnt,
@@ -191,8 +191,8 @@ for(yr in 2011:2019) {
               kurtosis = moments::kurtosis(value),
               lowerCI = coda::HPDinterval(coda::as.mcmc(value))[,1],
               upperCI = coda::HPDinterval(coda::as.mcmc(value))[,2]) %>%
-    mutate_at(vars(mean, median, mode, sd, matches('CI$')),
-              funs(ifelse(. < 0, 0, .))) %>%
+    mutate(across(c(mean, median, mode, sd, matches('CI$')),
+                    ~ifelse(. < 0, 0, .))) %>%
     ungroup()
 
 
