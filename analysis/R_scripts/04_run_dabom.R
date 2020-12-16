@@ -21,7 +21,7 @@ library(lubridate)
 # Load required DABOM data
 #-----------------------------------------------------------------
 # set year
-yr = 2015
+yr = 2020
 
 for(yr in 2016:2019) {
   cat(paste('Working on', yr, '\n'))
