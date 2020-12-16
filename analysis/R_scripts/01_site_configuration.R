@@ -145,7 +145,7 @@ configuration = org_config %>%
          Node = ifelse(Node == "OMK",
                        'OMKB0',
                        Node),
-         Node = ifelse(SiteID %in% c('OFB', 'OMF'),
+         Node = ifelse(SiteID %in% c('OBF', 'OMF'),
                        'OMKA0',
                        Node),
          Node = ifelse(SiteID == 'ZSL',
