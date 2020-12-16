@@ -63,12 +63,6 @@ for(yr in 2016:2019) {
   #------------------------------------------------------------------------------
   # turn into wide version of capture histories, and add origin
   # add fish origin from biological data
-  file_nms = list.files('analysis/data/derived_data')
-  bio_nm = file_nms[grepl('Bio', file_nms) & grepl('.rds$', file_nms)]
-
-  bio_df = read_rds(paste0('analysis/data/derived_data/', bio_nm)) %>%
-    filter(Year == yr)
-
   dabom_df = createDABOMcapHist(proc_ch,
                                 proc_list$NodeOrder,
                                 split_matrices = F) %>%
