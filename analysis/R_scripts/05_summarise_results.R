@@ -246,7 +246,8 @@ for(yr in 2011:2019) {
     select(Species, SpawnYear, Population, Origin,
            Escape = mean,
            EscSE = sd) %>%
-    left_join(bioSumm) %>%
+    left_join(bioSumm %>%
+                rename(Population = Stream)) %>%
     rowwise() %>%
     mutate(Est = Escape * prop,
            EstSE = deltamethod(~ x1 * x2,
