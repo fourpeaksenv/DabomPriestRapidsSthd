@@ -204,20 +204,37 @@ proc_list$ProcCapHist %>%
   xtabs(~ SiteID, .)
 
 # overwrite previously saved capture histories
-# proc_list$ProcCapHist = proc_ch
+proc_list$ProcCapHist = proc_ch
+
+# get the biological data associated with each tag
+file_nms = list.files('analysis/data/derived_data')
+bio_nm = file_nms[grepl('Bio', file_nms) & grepl('.rds$', file_nms)]
+
+bio_df = read_rds(paste0('analysis/data/derived_data/', bio_nm[length(bio_nm)])) %>%
+  filter(Year == yr,
+         TagID %in% unique(proc_list$ProcCapHist$TagID))
+
+# any duplicated tags?
+bio_df %>%
+  filter(TagID %in% TagID[duplicated(TagID)]) %>%
+  arrange(TagID, TrapDate) %>%
+  as.data.frame()
+
+# keep the data from the first time fish was caught (has all the age data associated with it)
+bio_df %<>%
+  group_by(TagID) %>%
+  filter(TrapDate == min(TrapDate)) %>%
+  ungroup()
+
 
 # re-save some stuff
-save(yr, start_date, parent_child, proc_list,
+save(yr, start_date, parent_child, proc_list, bio_df,
      file = paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
 
 
 #-----------------------------------------------------------------
 # tag summaries
 #-----------------------------------------------------------------
-file_nms = list.files('analysis/data/derived_data')
-bio_nm = file_nms[grepl('Bio', file_nms) & grepl('.rds$', file_nms)]
-
-bio_df = read_rds(paste0('analysis/data/derived_data/', bio_nm))
 
 # Fix UserProcStatus, and summarise tag data
 tag_summ = proc_list$ProcCapHist %>%
@@ -232,10 +249,6 @@ tag_summ %>%
   arrange(TagID, TrapDate) %>%
   as.data.frame()
 
-tag_summ %<>%
-  group_by(TagID) %>%
-  filter(TrapDate == min(TrapDate))
-
 # where are tags assigned?
 janitor::tabyl(tag_summ, AssignSpawnSite) %>%
 # janitor::tabyl(tag_summ, AssignSpawnNode) %>%
@@ -248,8 +261,8 @@ tag_summ %>%
                                  'PRA_bb')) %>%
   janitor::tabyl(Branch, Origin) %>%
   # janitor::adorn_totals(where = c("row")) %>%
-  # janitor::adorn_percentages(denominator = "col") %>%
-  # janitor::adorn_pct_formatting()
+  janitor::adorn_percentages(denominator = "col") %>%
+  janitor::adorn_pct_formatting()
   janitor::adorn_totals(where = c("row", "col"))
 
 # preliminary estimate of node efficiency
@@ -292,27 +305,18 @@ proc_ch %>%
 
 
 tag_summ %>%
-  mutate(Population = Group,
-         Population = if_else(AssignSpawnSite == 'LWC' | grepl('ROZ', TagPath),
-                              'Upper Yakima',
-                              Population),
-         Population = if_else(AssignSpawnSite %in% c('LNR', 'AH1'),
-                              'Naches',
-                              Population),
-         Population = if_else(is.na(Group),
-                              'PRO_bb',
-                              Population)) %>%
-  filter(Population %in% c('Status', 'Naches', 'Toppenish', 'Upper Yakima')) %>%
-  ggplot(aes(x = PassDate,
+  mutate(Population = fct_explicit_na(Group,
+                                      'PRA_bb')) %>%
+  ggplot(aes(x = TrapDate,
              color = Population,
              fill = Population)) +
-  # geom_density(alpha = 0.2) +
-  geom_histogram() +
-  facet_wrap(~ Population) +
+  geom_density(alpha = 0.2) +
+  # geom_histogram() +
+  # facet_wrap(~ Population) +
   theme_bw() +
   scale_color_brewer(palette = 'Set1') +
   scale_fill_brewer(palette = 'Set1')
 
-# ggsave('outgoing/figures/RunTiming_2019.pdf',
+# ggsave('outgoing/figures/RunTiming_2020.pdf',
 #        width = 6,
 #        height = 6)
