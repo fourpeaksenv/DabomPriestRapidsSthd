@@ -54,7 +54,8 @@ valid_paths = parent_child %>%
 
 
 
-tag_summ %>%
+tag_prop = tag_summ %>%
+  filter(Origin == "H") %>%
   mutate(CWT = if_else(is.na(CWT), F,
                         if_else(CWT == "SN", T, NA)),
          AdClip = if_else(is.na(AdClip), F,
@@ -73,9 +74,13 @@ tag_summ %>%
   summarise(n_tags = n_distinct(TagID),
             .groups = "drop") %>%
   group_by(path_sites) %>%
-  mutate(prop = n_tags / sum(n_tags))
+  mutate(prop = n_tags / sum(n_tags),
+         # using normal approximation
+         prop_se = sqrt((prop * (1 - prop))/sum(n_tags))) %>%
+  ungroup() %>%
+  rename(Site = path_sites)
 
-
+# need to figure out multinomial proportion standard error
 
 # get DABOM estimates of hatchery escapement
 hatch_est = read_excel(paste0('outgoing/estimates/PRA_', spp, '_', yr, '_20200604.xlsx'),
@@ -83,4 +88,24 @@ hatch_est = read_excel(paste0('outgoing/estimates/PRA_', spp, '_', yr, '_2020060
   filter(Origin == "Hatchery",
          grepl("^past_", param),
          estimate > 0) %>%
-  mutate(node = str_remove(param, "^past_"))
+  mutate(Site = str_remove(param, "^past_"))
+
+# combine tptal hatchery escapement with proportions of CWT / Ad Clip combos
+hatch_type = hatch_est %>%
+  left_join(tag_prop) %>%
+  rowwise() %>%
+  mutate(escp = estimate * prop,
+         escp_se = msm::deltamethod(~ x1 * x2,
+                                    mean = c(estimate, prop),
+                                    cov = diag(c(se, prop_se)^2))) %>%
+  ungroup() %>%
+  select(Origin, Site,
+         tot_escp = estimate,
+         tot_se = se,
+         AdClip:n_tags,
+         prop:escp_se)
+
+hatch_type %>%
+  pivot_wider(id_cols = c(Origin:tot_se),
+              names_from = c("AdClip", "CWT"),
+              values_from = "escp")
