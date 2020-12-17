@@ -104,12 +104,12 @@ configuration = org_config %>%
          Node = if_else(SiteID == 'EHL' & ConfigID == 110 & AntennaID %in% c('01', '02'),
                        'EHLA0',
                        Node),
-         Node = if_else(SiteID == 'WEA' & AntennaID == 'C1',
-                       'WVTB0',
-                       Node),
-         Node = if_else(SiteID == 'WEA' & AntennaID == 'C2',
-                       'WVTA0',
-                       Node),
+         Node = if_else(SiteID == "WEH" & AntennaID == "A2",
+                        "WEHB0",
+                        Node),
+         Node = if_else(SiteID == "WEH" & AntennaID != "A2",
+                        "WEHA0",
+                        Node),
          Node = if_else(Node == "LMR",
                        'LMRB0',
                        Node),
@@ -244,7 +244,7 @@ for(grp in names(site_list)) {
     as.character()
 }
 site_list[['Wenatchee']] = c('RIA', site_list[['Wenatchee']])
-site_list[['Entiat']] = c('RRF', 'WVT', site_list[['Entiat']])
+site_list[['Entiat']] = c('RRF', 'WEH', site_list[['Entiat']])
 site_list[['Methow']] = c('WEA', site_list[['Methow']])
 
 # Save file.
@@ -447,10 +447,10 @@ allGr_p = myGraph %>%
   theme(legend.position = 'bottom')
 allGr_p
 
-ggsave('analysis/figures/UC_SiteSchematic.pdf',
+ggsave('analysis/figures/UC_SiteSchematic_2020.pdf',
        allGr_p,
-       width = 8,
-       height = 6,
+       width = 15,
+       height = 5,
        dpi = 600)
 
 
