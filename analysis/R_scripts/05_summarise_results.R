@@ -24,7 +24,7 @@ spp = "Steelhead"
 # set year
 yr = 2020
 
-for(yr in 2011:2019) {
+# for(yr in 2011:2019) {
   #-----------------------------------------------------------------
   # load JAGS MCMC results
   load(paste0("analysis/data/derived_data/model_fits/PRA_", spp, "_", yr,'_DABOM.rda'))
@@ -37,7 +37,9 @@ for(yr in 2011:2019) {
                               trap_data = bio_df %>%
                                 filter(TagID %in% unique(proc_list$proc_ch$TagID)) %>%
                                 group_by(TagID) %>%
-                                slice(1)) %>%
+                                slice(1),
+                              saveCSV = T,
+                              file_name = paste0('outgoing/other/TagSummary_', yr, '.csv')) %>%
     mutate(Group = fct_explicit_na(Group))
 
 
