@@ -38,17 +38,18 @@ yr = 2020
                                 filter(TagID %in% unique(proc_list$proc_ch$TagID)) %>%
                                 group_by(TagID) %>%
                                 slice(1),
-                              saveCSV = T,
+                              saveCSV = F,
                               file_name = paste0('outgoing/other/TagSummary_', yr, '.csv')) %>%
     mutate(Group = fct_explicit_na(Group))
 
 
   # any duplicate tags?
+  sum(duplicated(tag_summ$TagID))
   tag_summ %>%
     filter(TagID %in% TagID[duplicated(TagID)]) %>%
     arrange(TagID, TrapDate)
 
-  # summarise detection probabilities
+  # summarize detection probabilities
   detect_summ = summariseDetectProbs(dabom_mod = dabom_mod,
                                      capHist_proc = proc_list$proc_ch %>%
                                        filter(UserProcStatus)) %>%
@@ -86,23 +87,14 @@ yr = 2020
   #-----------------------------------------------------------------
   # total escapement past Priest
   #-----------------------------------------------------------------
-  # window count
-  tot_win_cnt = getWindowCounts(dam = 'PRD',
-                                spp = spp,
-                                start_date = paste0(yr-1, '0601'),
-                                end_date = paste0(yr, '0531')) %>%
-    summarise_at(vars(win_cnt),
-                 list(sum)) %>%
-    pull(win_cnt)
+  # get escapement past Priest by origin
+  start_date = paste0(yr-1, '0601')
+  end_date = paste0(yr, '0531')
 
-  # re-ascension data
-  reasc_data = queryPITtagData(damPIT = 'PRA',
+  org_escape = queryPITtagData(damPIT = 'PRA',
                                spp = spp,
-                               start_date = paste0(yr-1, '0601'),
-                               end_date = paste0(yr, '0531'))
-
-  # adjust for re-ascension and origin
-  tot_escape = reasc_data %>%
+                               start_date = start_date,
+                               end_date = end_date) %>%
     mutate(SpawnYear = yr,
            TagIDAscentCount = ifelse(is.na(TagIDAscentCount),
                                      0, TagIDAscentCount),
@@ -117,9 +109,15 @@ yr = 2020
                      na.rm = T),
               .groups = "drop") %>%
     mutate(reascRate = reascent_tags / tot_tags,
-           reascRateSE = sqrt(reascRate * (1 - reascRate) / tot_tags),
-           totWinCnt = tot_win_cnt,
-           adjWinCnt = tot_win_cnt * (1 - reascRate),
+           reascRateSE = sqrt(reascRate * (1 - reascRate) / tot_tags)) %>%
+    bind_cols(getWindowCounts(dam = 'PRD',
+                              spp = spp,
+                              start_date = paste0(yr-1, '0601'),
+                              end_date = paste0(yr, '0531')) %>%
+                summarise_at(vars(win_cnt),
+                             list(sum)) %>%
+                select(tot_win_cnt = win_cnt)) %>%
+    mutate(adjWinCnt = tot_win_cnt * (1 - reascRate),
            adjWinCntSE = tot_win_cnt * reascRateSE) %>%
     bind_cols(bio_df %>%
                 group_by(Origin) %>%
@@ -130,17 +128,15 @@ yr = 2020
                 ungroup() %>%
                 mutate(propW = W / (W + H),
                        propH = 1 - propW,
-                       propOrgSE = sqrt((propW * (1 - propW)) / (W + H))))
-
-  org_escape = tot_escape %>%
+                       propOrgSE = sqrt((propW * (1 - propW)) / (W + H)))) %>%
     mutate(Hescp = propH * adjWinCnt,
-           HescpSE = deltamethod(~ x1 * x2,
-                                 mean = c(propH, adjWinCnt),
-                                 cov = diag(c(propOrgSE, adjWinCntSE)^2))) %>%
+           HescpSE = msm::deltamethod(~ x1 * x2,
+                                      mean = c(propH, adjWinCnt),
+                                      cov = diag(c(propOrgSE, adjWinCntSE)^2))) %>%
     mutate(Wescp = propW * adjWinCnt,
-           WescpSE = deltamethod(~ x1 * x2,
-                                 mean = c(propW, adjWinCnt),
-                                 cov = diag(c(propOrgSE, adjWinCntSE)^2))) %>%
+           WescpSE = msm::deltamethod(~ x1 * x2,
+                                      mean = c(propW, adjWinCnt),
+                                      cov = diag(c(propOrgSE, adjWinCntSE)^2))) %>%
     select(Species, SpawnYear, matches('escp')) %>%
     pivot_longer(-(Species:SpawnYear),
                  names_to = "var",
@@ -156,6 +152,76 @@ yr = 2020
                 values_from = "value")
 
 
+  # # window count
+  # tot_win_cnt = getWindowCounts(dam = 'PRD',
+  #                               spp = spp,
+  #                               start_date = paste0(yr-1, '0601'),
+  #                               end_date = paste0(yr, '0531')) %>%
+  #   summarise_at(vars(win_cnt),
+  #                list(sum)) %>%
+  #   pull(win_cnt)
+  #
+  # # re-ascension data
+  # reasc_data = queryPITtagData(damPIT = 'PRA',
+  #                              spp = spp,
+  #                              start_date = paste0(yr-1, '0601'),
+  #                              end_date = paste0(yr, '0531'))
+  #
+  # # adjust for re-ascension and origin
+  # tot_escape = reasc_data %>%
+  #   mutate(SpawnYear = yr,
+  #          TagIDAscentCount = ifelse(is.na(TagIDAscentCount),
+  #                                    0, TagIDAscentCount),
+  #          ReAscent = ifelse(TagIDAscentCount > 1, T, F)) %>%
+  #   group_by(Species, SpawnYear, Date) %>%
+  #   summarise(tot_tags = n_distinct(TagID),
+  #             reascent_tags = n_distinct(TagID[ReAscent]),
+  #             .groups = "drop") %>%
+  #   group_by(Species, SpawnYear) %>%
+  #   summarise(across(matches('tags'),
+  #                    sum,
+  #                    na.rm = T),
+  #             .groups = "drop") %>%
+  #   mutate(reascRate = reascent_tags / tot_tags,
+  #          reascRateSE = sqrt(reascRate * (1 - reascRate) / tot_tags),
+  #          totWinCnt = tot_win_cnt,
+  #          adjWinCnt = tot_win_cnt * (1 - reascRate),
+  #          adjWinCntSE = tot_win_cnt * reascRateSE) %>%
+  #   bind_cols(bio_df %>%
+  #               group_by(Origin) %>%
+  #               summarise(nTags = n_distinct(TagID)) %>%
+  #               pivot_wider(names_from = "Origin",
+  #                           values_from = "nTags",
+  #                           values_fill = list(nTags = as.integer(0))) %>%
+  #               ungroup() %>%
+  #               mutate(propW = W / (W + H),
+  #                      propH = 1 - propW,
+  #                      propOrgSE = sqrt((propW * (1 - propW)) / (W + H))))
+  #
+  # org_escape = tot_escape %>%
+  #   mutate(Hescp = propH * adjWinCnt,
+  #          HescpSE = deltamethod(~ x1 * x2,
+  #                                mean = c(propH, adjWinCnt),
+  #                                cov = diag(c(propOrgSE, adjWinCntSE)^2))) %>%
+  #   mutate(Wescp = propW * adjWinCnt,
+  #          WescpSE = deltamethod(~ x1 * x2,
+  #                                mean = c(propW, adjWinCnt),
+  #                                cov = diag(c(propOrgSE, adjWinCntSE)^2))) %>%
+  #   select(Species, SpawnYear, matches('escp')) %>%
+  #   pivot_longer(-(Species:SpawnYear),
+  #                names_to = "var",
+  #                values_to = "value") %>%
+  #   mutate(Origin = if_else(grepl('^H', var),
+  #                           'Hatchery',
+  #                           'Natural'),
+  #          param = if_else(grepl('SE$', var),
+  #                          'tot_escp_se',
+  #                          'tot_escp')) %>%
+  #   select(-var) %>%
+  #   pivot_wider(names_from = "param",
+  #               values_from = "value")
+
+
 
   #-----------------------------------------------------------------
   # translate movement estimates to escapement
@@ -163,8 +229,8 @@ yr = 2020
   # bootstrap posteriors
   n_samps = trans_df %>%
     group_by(Origin, param) %>%
-    summarise(nIters = n()) %>%
-    ungroup() %>%
+    summarise(nIters = n(),
+              .groups = "drop") %>%
     pull(nIters) %>%
     unique()
 
@@ -345,4 +411,4 @@ yr = 2020
                        file = paste0('outgoing/estimates/PRA_', spp, '_', yr, '_', format(Sys.Date(), '%Y%m%d'), '.xlsx'),
                        firstRow = T,
                        headerStyle = openxlsx::createStyle(textDecoration = "BOLD"))
-}
+# }
