@@ -199,7 +199,7 @@ proc_list$ProcCapHist %>%
   select(TagID, SiteID, Node) %>%
   distinct() %>%
   anti_join(proc_ch %>%
-              select(TagID, Node) %>%
+              select(TagID, Node, UserProcStatus) %>%
               distinct()) %>%
   xtabs(~ SiteID, .)
 
