@@ -20,6 +20,11 @@ spp = "Steelhead"
 # set year
 yr = 2019
 
+# get the right version of DABOM
+if(yr <= 2019) {
+  remotes::install_github("KevinSee/DABOM@v1.0.0")
+}
+
 # load JAGS MCMC results
 load(paste0("analysis/data/derived_data/model_fits/PRA_", spp, "_", yr,'_DABOM.rda'))
 
