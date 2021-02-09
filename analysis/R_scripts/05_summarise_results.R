@@ -6,7 +6,7 @@
 
 #-----------------------------------------------------------------
 # load needed libraries
-library(DABOM)
+# library(DABOM)
 library(PITcleanr)
 library(tidyverse)
 # library(jagsUI)
@@ -22,7 +22,17 @@ library(coda)
 # set species
 spp = "Steelhead"
 # set year
-yr = 2020
+yr = 2019
+
+# for years prior to 2020, use older version of DABOM
+if(yr < 2020) {
+  remotes::install_github("BiomarkABS/DABOM@v1.0.0")
+  library(DABOM)
+} else {
+  remotes::install_github("BiomarkABS/DABOM")
+  library(DABOM)
+}
+
 
 # for(yr in 2011:2019) {
   #-----------------------------------------------------------------
