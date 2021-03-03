@@ -58,7 +58,13 @@ yr = 2020
       mutate(`Event Date Time Value` = paste(date, time)) %>%
       mutate(obs_date = lubridate::mdy_hms(`Event Date Time Value`)) %>%
       filter(year(obs_date) == yr) %>%
-      select(-date, -time, -obs_date)
+      select(-date, -time, -obs_date) %>%
+      # get the origin info for these fish
+      left_join(observations %>%
+                  select(`Tag Code`,
+                         `Mark Species Name`,
+                         `Mark Rear Type Name`) %>%
+                  distinct())
 
     observations %<>%
       bind_rows(clk_obs)
