@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: break down hatchery estimates into different groups
 # Created: 12/8/20
-# Last Modified: 12/17/20
+# Last Modified: 1/11/2021
 # Notes:
 
 #-----------------------------------------------------------------
@@ -18,7 +18,7 @@ library(msm)
 # set species
 spp = "Steelhead"
 # set year
-yr = 2019
+yr = 2020
 
 # get the right version of DABOM
 if(yr <= 2019) {
@@ -107,8 +107,8 @@ tag_prop = tag_summ %>%
 
 # get DABOM estimates of hatchery escapement
 # movement probabilities
-trans_df = compileTransProbs_PRA(dabom_mod) %>%
-  filter(Origin == "Hatchery")
+trans_df = compileTransProbs_PRA(dabom_mod) #%>%
+  # filter(Origin == "Hatchery")
 
 # get escapement past Priest by origin
 start_date = paste0(yr-1, '0601')
@@ -176,7 +176,7 @@ org_escape = queryPITtagData(damPIT = 'PRA',
 
 set.seed(3)
 escp_post = org_escape %>%
-  filter(Origin == "Hatchery") %>%
+  # filter(Origin == "Hatchery") %>%
   crossing(chain = unique(trans_df$chain)) %>%
   mutate(samps = map2(tot_escp,
                       tot_escp_se,
@@ -207,7 +207,9 @@ prop_samps = tag_prop %>%
                                             x, y)) %>%
                           mutate(iter = 1:n())
                       })) %>%
-  select(Site:CWT,
+  mutate(Origin = 'Hatchery') %>%
+  select(Origin,
+         Site:CWT,
          n_tags, tot_tags,
          # prop_obs = prop,
          # prop_se,
@@ -218,7 +220,12 @@ prop_samps = tag_prop %>%
 
 
 all_post = escp_post %>%
-  inner_join(prop_samps) %>%
+  left_join(prop_samps) %>%
+  mutate(prop = if_else(Origin != "Hatchery",
+                        1,
+                        if_else(value == 0,
+                                0,
+                                prop))) %>%
   mutate(n_fish = value * prop) %>%
   mutate(across(n_fish,
                 round,
@@ -255,17 +262,20 @@ mark_grps %>%
   filter(n_tags > 0)
 
 mark_grps %>%
-  full_join(hatch_est %>%
-              select(Origin, Site,
-                     tot_escp = estimate,
-                     tot_se = se)) %>%
-  tail()
+  filter(tot_tags < 3)
 
+#--------------------------------------------------------
+# get most recent estimates for this spawn year
+all_est_files = list.files('outgoing/estimates',
+                           paste0('PRA_Steelhead_', yr))
 
+which_file = all_est_files %>%
+  str_sub(start = -13, -6) %>%
+  lubridate::ymd() %>%
+  which.max()
+file_nm = all_est_files[which_file]
 
-
-
-hatch_est = read_excel(paste0('outgoing/estimates/PRA_', spp, '_', yr, '_20200604.xlsx'),
+hatch_est = read_excel(paste0('outgoing/estimates/', file_nm),
                        sheet = 'All Escapement') %>%
   filter(Origin == "Hatchery",
          !grepl('_bb$', param),
@@ -273,6 +283,26 @@ hatch_est = read_excel(paste0('outgoing/estimates/PRA_', spp, '_', yr, '_2020060
          estimate > 0) %>%
   mutate(Site = str_remove(param, "^past_"))
 
+mark_grps %>%
+  inner_join(hatch_est %>%
+              select(Origin, Site,
+                     tot_escp = estimate,
+                     tot_se = se)) %>%
+  tail()
+
+mark_grps %>%
+  group_by(Species,
+           Origin,
+           Site) %>%
+  summarise(across(mean,
+                   sum,
+                   na.rm = T)) %>%
+  mutate(across(mean,
+                round)) %>%
+  inner_join(hatch_est %>%
+               select(Origin, Site,
+                      tot_escp = estimate)) %>%
+  filter(mean != tot_escp)
 
 hatch_type = hatch_est %>%
   select(Origin, Site,
