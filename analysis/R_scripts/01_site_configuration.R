@@ -1,553 +1,547 @@
 # Author: Kevin See
 # Purpose: Develop configuration file for DABOM
-# Created: 4/27/20
-# Last Modified: 12/17/20
+# Created: 4/1/20
+# Last Modified: 6/7/21
 # Notes:
 
-#-----------------------------------------------------------------
+# install some needed packages
+install.packages(c("tidyverse",
+                   "devtools",
+                   "here",
+                   "sf",
+                   "magritter",
+                   "readxl",
+                   "writexl",
+                   "janitor",
+                   "rjags",
+                   "msm",
+                   "moments",
+                   "coda"))
+
+devtools::install_github("BiomarkABS/STADEM")
+devtools::install_github("BiomarkABS/PITcleanr")
+devtools::install_github("BiomarkABS/DABOM")
+
+#------------------------------,-----------------------------------
 # load needed libraries
 library(PITcleanr)
 library(tidyverse)
 library(magrittr)
+library(sf)
+library(here)
 
 #-----------------------------------------------------------------
-# dataframe of sites for PRD DABOM model with some indication of network structure
-site_df = writePRDNodeNetwork()
+# set starting point
+root_site = "PRA"
 
 # build configuration table (requires internet connection)
 org_config = buildConfig()
 
-# manually add site for Colockum Creek (not in PTAGIS)
-org_config = org_config %>%
-  bind_rows(tibble(SiteID = 'CLK',
-                   ConfigID = 100,
-                   AntennaID = 'A1',
-                   Node = 'CLK',
-                   ValidNode = T,
-                   # making these up
-                   StartDate = as.POSIXct(lubridate::ymd('20100101')),
-                   SiteType = 'INT',
-                   SiteName = 'Colockum Creek',
-                   AntennaGroup = 'Single Colockum Ck',
-                   SiteDescription = 'Tempoary single antenna.',
-                   SiteTypeName = 'Instream Remote Detection System',
-                   RKM = '740.001',
-                   RKMTotal = 741))
-
 # customize some nodes based on DABOM framework
 configuration = org_config %>%
-  filter(!(SiteID == 'WAN' & SiteType == 'MRR'),
-         !(SiteID == 'TMF' & SiteType == 'MRR'),
-         !(SiteID == 'PRO' & SiteType == 'MRR')) %>%
-  mutate(Node = if_else(SiteID %in% c('RIA', 'RRF', 'WEA', 'PRV'),
-                       SiteID,
-                       Node)) %>%
-  mutate(Node = if_else(SiteID == 'PRDLD1',
-                       'PRA',
-                       Node)) %>%
-  mutate(Node = if_else(Node == "LWE",
-                       'LWEB0',
-                       Node),
-         Node = if_else(SiteID %in% c('TUF', 'TUMFBY', 'TUM'),
-                       'TUM',
-                       Node),
-         Node = if_else(SiteID == 'LNF' & AntennaID %in% c('01', '02'),
-                       'LNFA0',
-                       Node),
-         Node = if_else(SiteID == 'LNF' & AntennaID %in% c('03', '04'),
-                       'LNFB0',
-                       Node),
-         Node = if_else(SiteID == 'LEAV',
-                       'LNFA0',
-                       Node),
-         Node = if_else(SiteID == 'ICL' & ConfigID == 100,
-                       'ICLB0',
-                       Node),
-         Node = if_else(SiteID == 'CHIWAC',
-                       'CHWA0',
-                       Node),
-         Node = if_else(SiteID == 'CHIWAR',
-                       'CHLA0',
-                       Node),
-         Node = if_else(SiteID == 'CHIKAC',
-                       'CHUA0',
-                       Node),
-         Node = if_else(SiteID == 'WHITER',
-                       'WTLA0',
-                       Node),
-         Node = if_else(SiteID == 'LWENAT',
-                       'LWNA0',
-                       Node),
-         Node = if_else(SiteID == 'NASONC',
-                       'NALA0',
-                       Node),
+  # manually add site for Colockum Creek (not in PTAGIS)
+  bind_rows(tibble(site_code = 'CLK',
+                   config_id = 100,
+                   antenna_id = 'A1',
+                   node = 'CLK',
+                   # making these up
+                   start_date = as.POSIXct(lubridate::ymd('20100101')),
+                   site_type = 'INT',
+                   site_name = 'Colockum Creek',
+                   antenna_group = 'Single Colockum Ck',
+                   site_description = 'Temporary single antenna.',
+                   site_type_name = 'Instream Remote Detection System',
+                   rkm = '740.001',
+                   rkm_total = 741,
+                   # this puts CLK upstream of RIA
+                   latitude = 47.3707357269787,
+                   longitude = -120.25617371760839)) %>%
+  # this puts CLK on Colockum Creek, but between PRA and RIA
+  # latitude = 47.29722788926544,
+  # longitude = -120.10577913008702)) %>%
+  filter(!(site_code == 'WAN' & site_type == 'MRR'),
+         !(site_code == 'TMF' & site_type == 'MRR'),
+         !(site_code == 'PRO' & site_type == 'MRR')) %>%
+  mutate(node = if_else(site_code %in% c('RIA', 'RRF', 'WEA', 'PRV'),
+                        site_code,
+                        node)) %>%
+  mutate(node = if_else(site_code == 'PRDLD1',
+                        'PRA',
+                        node)) %>%
+  mutate(node = if_else(node == "LWE",
+                        'LWEB0',
+                        node),
+         node = if_else(site_code %in% c('TUF', 'TUMFBY', 'TUM'),
+                        'TUM',
+                        node),
+         node = if_else(site_code == 'LNF' & antenna_id %in% c('01', '02'),
+                        'LNFA0',
+                        node),
+         node = if_else(site_code == 'LNF' & antenna_id %in% c('03', '04'),
+                        'LNFB0',
+                        node),
+         node = if_else(site_code == 'LEAV',
+                        'LNFA0',
+                        node),
+         node = if_else(site_code == 'ICL' & config_id == 100,
+                        'ICLB0',
+                        node),
+         node = if_else(site_code == 'CHIWAC',
+                        'CHWA0',
+                        node),
+         node = if_else(site_code == 'CHIWAR',
+                        'CHLA0',
+                        node),
+         node = if_else(site_code == 'CHIKAC',
+                        'CHUA0',
+                        node),
+         node = if_else(site_code == 'WHITER',
+                        'WTLA0',
+                        node),
+         node = if_else(site_code == 'LWENAT',
+                        'LWNA0',
+                        node),
+         node = if_else(site_code == 'NASONC',
+                        'NALA0',
+                        node),
          # any fish seen at Dryden dam should also be seen at LWE
-         Node = if_else(SiteID == 'DRY',
-                       'LWEA0',
-                       Node),
+         node = if_else(site_code == 'DRY',
+                        'LWEA0',
+                        node),
          # any fish seen at Chiwawa acclimation pond gets moved to CHL
-         Node = if_else(SiteID == 'CHP',
-                       'CHLA0',
-                       Node),
-         Node = if_else(SiteID == 'EBO',
-                       'RRF',
-                       Node),
-         Node = if_else(SiteID == 'EHL' & ConfigID == 100 & AntennaID == '02',
-                       'EHLB0',
-                       Node),
-         Node = if_else(SiteID == 'EHL' & ConfigID == 100 & AntennaID == '01',
-                       'EHLA0',
-                       Node),
-         Node = if_else(SiteID == 'EHL' & ConfigID == 110 & AntennaID == '03',
-                       'EHLB0',
-                       Node),
-         Node = if_else(SiteID == 'EHL' & ConfigID == 110 & AntennaID %in% c('01', '02'),
-                       'EHLA0',
-                       Node),
-         Node = if_else(SiteID == "WEH" & AntennaID == "A2",
+         node = if_else(site_code == 'CHP',
+                        'CHLA0',
+                        node),
+         node = if_else(site_code == 'EBO',
+                        'RRF',
+                        node),
+         node = if_else(site_code == 'RRJ',
+                        'RRF',
+                        node),
+         node = if_else(site_code == 'EHL' & config_id == 100 & antenna_id == '02',
+                        'EHLB0',
+                        node),
+         node = if_else(site_code == 'EHL' & config_id == 100 & antenna_id == '01',
+                        'EHLA0',
+                        node),
+         node = if_else(site_code == 'EHL' & config_id == 110 & antenna_id == '03',
+                        'EHLB0',
+                        node),
+         node = if_else(site_code == 'EHL' & config_id == 110 & antenna_id %in% c('01', '02'),
+                        'EHLA0',
+                        node),
+         node = if_else(site_code == "WEH" & antenna_id == "A2",
                         "WEHB0",
-                        Node),
-         Node = if_else(SiteID == "WEH" & AntennaID != "A2",
+                        node),
+         node = if_else(site_code == "WEH" & antenna_id != "A2",
                         "WEHA0",
-                        Node),
-         Node = if_else(Node == "LMR",
-                       'LMRB0',
-                       Node),
-         Node = if_else(SiteID == 'LBC' & ConfigID == 100,
-                       'LBCB0',
-                       Node),
-         Node = if_else(SiteID == 'MRC',
-                       'MRCB0',
-                       Node),
-         Node = if_else(SiteID %in% c('SSC', '18N', 'MHB', 'M3R', 'MWF'),
-                       'MRCA0',
-                       Node),
-         Node = if_else(SiteID == 'MSH' & AntennaID %in% c('02', '03'),
-                       'MSHB0',
-                       Node),
-         Node = if_else(SiteID == 'MSH' & AntennaID %in% c('01'),
-                       'MSHA0',
-                       Node),
-         Node = if_else(SiteID == 'MSH' & AntennaID == '00',
-                       'METHB0',
-                       Node),
-         Node = if_else(SiteID == 'METH',
-                       'METHA0',
-                       Node),
-         Node = if_else(SiteID == 'LLC' & ConfigID == 100,
-                       if_else(AntennaID == 'D3',
-                              'LLCB0',
-                              'LLCA0'),
-                       Node),
-         Node = if_else(Node == "SCP",
-                       'SCPB0',
-                       Node),
-         # Node = if_else(Node == "OMK",
+                        node),
+         node = if_else(node == "LMR",
+                        'LMRB0',
+                        node),
+         node = if_else(site_code == 'LBC' & config_id == 100,
+                        'LBCB0',
+                        node),
+         node = if_else(site_code == 'MRC',
+                        'MRCB0',
+                        node),
+         node = if_else(site_code %in% c('SSC', '18N', 'MHB', 'M3R', 'MWF'),
+                        'MRCA0',
+                        node),
+         node = if_else(site_code == 'MSH' & antenna_id %in% c('02', '03'),
+                        'MSHB0',
+                        node),
+         node = if_else(site_code == 'MSH' & antenna_id %in% c('01'),
+                        'MSHA0',
+                        node),
+         node = if_else(site_code == 'MSH' & antenna_id == '00',
+                        'METHB0',
+                        node),
+         node = if_else(site_code == 'METH',
+                        'METHA0',
+                        node),
+         node = if_else(site_code == 'LLC' & config_id == 100,
+                        if_else(antenna_id == 'D3',
+                                'LLCB0',
+                                'LLCA0'),
+                        node),
+         node = if_else(node == "SCP",
+                        'SCPB0',
+                        node),
+         # node = if_else(node == "OMK",
          #               'OMKB0',
-         #               Node),
-         # Node = if_else(SiteID %in% c('OBF', 'OMF'),
+         #               node),
+         # node = if_else(site_code %in% c('OBF', 'OMF'),
          #               'OMKA0',
-         #               Node),
-         Node = if_else(SiteID == "OMF",
+         #               node),
+         node = if_else(site_code == "OMF",
                         "OBF",
-                        Node),
-         Node = if_else(SiteID == 'ZSL',
-                       if_else(grepl('Weir 3', AntennaGroup, ignore.case = T),
-                              'ZSLB0',
-                              'ZSLA0'),
-                       Node),
-         Node = if_else(SiteID == 'SA1' & ConfigID == 110,
-                       'SA1B0',
-                       Node),
-         Node = if_else(SiteID == 'OKC' & ConfigID == 100,
-                       'OKCB0',
-                       Node),
+                        node),
+         node = if_else(site_code == 'ZSL',
+                        if_else(grepl('Weir 3', antenna_group, ignore.case = T),
+                                'ZSLB0',
+                                'ZSLA0'),
+                        node),
+         node = if_else(site_code == 'SA1' & config_id == 110,
+                        'SA1B0',
+                        node),
+         node = if_else(site_code == 'OKC' & config_id == 100,
+                        'OKCB0',
+                        node),
+         node = if_else(site_code == 'OMK' & config_id == 100,
+                        'OMKB0',
+                        node),
          # combine some sites above OKV into the upstream array at OKV
-         Node = if_else(SiteID %in% c("OKS", "OKW"),
+         node = if_else(site_code %in% c("OKS", "OKW"),
                         "OKVA0",
-                        Node),
-         Node = if_else(SiteID == 'RCT' & ConfigID == 100,
-                       'RCTB0',
-                       Node),
-         Node = if_else(SiteID == 'BPC' & ConfigID == 100,
-                       if_else(AntennaID %in% c('C3'),
-                              'BPCB0',
-                              'BPCA0'),
-                       Node),
-         Node = if_else(SiteID == 'PRH' & AntennaID %in% c('F1', 'F2', 'F3', 'F4'),
-                       'PRHB0',
-                       Node),
-         Node = if_else((SiteID == 'PRH' & AntennaID %in% c('F5', 'F6', '01', '02')) | SiteID %in% c('DDM', 'DM', 'UM', 'UUM', 'UP'),
-                       'PRHA0',
-                       Node),
-         Node = if_else(SiteID == 'PRO' & SiteType == 'INT',
-                       'PROB0',
-                       Node),
-         Node = if_else(SiteID %in% c('CHANDL', 'SAT', 'TOP', 'SUN', 'LNR', 'ROZ', 'LMC', 'TAN') | SiteID == 'PRO' & SiteType == 'MRR',
-                       'PROA0',
-                       Node),
-         Node = if_else(SiteID == 'ICH',
-                       'ICHB0',
-                       Node),
-         Node = if_else(grepl('522\\.', RKM) & RKMTotal > 538,
-                       'ICHA0',
-                       Node),
-         Node = if_else(SiteID == 'MDR',
-                       'MDRB0',
-                       Node),
-         Node = if_else(SiteID %in% c('LWD', 'BGM', 'NBA', 'MCD'),
-                       'MDRA0',
-                       Node),
-         Node = if_else(SiteID == 'HST',
-                       'HSTB0',
-                       Node),
-         Node = if_else(SiteID %in% c('BBT', 'COP', 'PAT'),
-                       'HSTA0',
-                       Node),
-         Node = if_else(SiteID == 'JD1',
-                       'JD1B0',
-                       Node),
-         Node = if_else(SiteID %in% c('30M', 'BR0', 'JDM', 'SJ1', 'SJ2', 'MJ1'),
-                       'JD1A0',
-                       Node),
-         Node = if_else(SiteID != 'JD1' & as.integer(stringr::str_split(RKM, '\\.', simplify = T)[,1]) < 351,
-                       'BelowJD1',
-                       Node)) %>%
-  distinct()
+                        node),
+         node = if_else(site_code == 'RCT' & config_id == 100,
+                        'RCTB0',
+                        node),
+         node = if_else(site_code == 'BPC' & config_id == 100,
+                        if_else(antenna_id %in% c('C3'),
+                                'BPCB0',
+                                'BPCA0'),
+                        node),
+         node = if_else(site_code == 'PRH' & antenna_id %in% c('F1', 'F2', 'F3', 'F4'),
+                        'PRHB0',
+                        node),
+         node = if_else((site_code == 'PRH' & antenna_id %in% c('F5', 'F6', '01', '02')) | site_code %in% c('DDM', 'DM', 'UM', 'UUM', 'UP'),
+                        'PRHA0',
+                        node),
+         node = if_else(site_code == 'PRO' & site_type == 'INT',
+                        'PROB0',
+                        node),
+         # grab all sites upstream of Prosser dam, and assign them to PROA0
+         node = if_else(site_code != "PRO" &
+                          as.integer(stringr::str_split(rkm, '\\.', simplify = T)[,1]) == 539 &
+                          as.integer(stringr::str_split(rkm, '\\.', simplify = T)[,2]) > 76,
+                        "PROA0",
+                        node),
+         node = if_else(site_code == 'ICH',
+                        'ICHB0',
+                        node),
+         node = if_else(grepl('522\\.', rkm) & rkm_total > 538,
+                        'ICHA0',
+                        node),
+         node = if_else(site_code == 'MDR',
+                        'MDRB0',
+                        node),
+         node = if_else(site_code %in% c('LWD', 'BGM', 'NBA', 'MCD'),
+                        'MDRA0',
+                        node),
+         node = if_else(site_code == 'HST',
+                        'HSTB0',
+                        node),
+         node = if_else(site_code %in% c('BBT', 'COP', 'PAT'),
+                        'HSTA0',
+                        node),
+         node = if_else(site_code == 'JD1',
+                        'JD1B0',
+                        node),
+         node = if_else(site_code %in% c('30M', 'BR0', 'JDM', 'SJ1', 'SJ2', 'MJ1'),
+                        'JD1A0',
+                        node),
+         node = if_else(site_code != 'JD1' & as.integer(stringr::str_split(rkm, '\\.', simplify = T)[,1]) < 351,
+                        'JDA',
+                        node)) %>%
+  distinct() %>%
+  # correct a couple rkm values
+  mutate(rkm = if_else(site_code == 'SA1',
+                       '858.041.003',
+                       rkm),
+         rkm_total = if_else(site_code == 'SA1',
+                             902,
+                             rkm_total)) %>%
+  mutate(rkm = if_else(site_code == 'TON',
+                       '858.133.001',
+                       rkm),
+         rkm_total = if_else(site_code == 'TON',
+                             992,
+                             rkm_total)) %>%
+  mutate(rkm = if_else(grepl('WEH', node),
+                       '829.001',
+                       rkm),
+         rkm_total = if_else(grepl('WEH', node),
+                             830,
+                             rkm_total)) %>%
+  mutate(rkm = if_else(site_code == "MSH",
+                       '843.082',
+                       rkm),
+         rkm_total = if_else(site_code == "MSH",
+                             925,
+                             rkm_total),
+         rkm = if_else(site_code == "METH",
+                       '843.083',
+                       rkm),
+         rkm_total = if_else(site_code == "METH",
+                             926,
+                             rkm_total))
 
-# correct a couple RKM values
-configuration = configuration %>%
-  mutate(RKM = if_else(SiteID == 'SA1',
-                      '858.041.003',
-                      RKM),
-         RKMTotal = if_else(SiteID == 'SA1',
-                           902,
-                           RKMTotal)) %>%
-  mutate(RKM = if_else(SiteID == 'TON',
-                      '858.133.001',
-                      RKM),
-         RKMTotal = if_else(SiteID == 'TON',
-                           992,
-                           RKMTotal)) %>%
-  mutate(RKM = if_else(grepl('WVT', Node),
-                      '829.001',
-                      RKM),
-         RKMTotal = if_else(grepl('WVT', Node),
-                           830,
-                           RKMTotal))
+# Node network for DABOM
 
-# group sites appropriately
-site_list = vector('list', 5)
-names(site_list) = c('BelowPriest', 'Wenatchee', 'Entiat', 'Methow', 'Okanogan')
-for(grp in names(site_list)) {
-  site_list[[grp]] = site_df %>%
-    filter(grepl(grp, path)) %>%
-    select(SiteID) %>%
-    as.matrix() %>%
-    as.character()
+# get spatial object of sites used in model
+sites_sf = writeOldNetworks()$PriestRapids %>%
+  mutate(across(c(SiteID, Step3),
+                recode,
+                "BelowJD1" = "JDA"),
+         path = str_replace(path, "BelowJD1", "JDA")) %>%
+  rename(site_code = SiteID) %>%
+  left_join(configuration) %>%
+  group_by(site_code) %>%
+  filter(config_id == max(config_id)) %>%
+  ungroup() %>%
+  select(site_code,
+         site_name,
+         site_type = site_type_name,
+         type = site_type,
+         rkm,
+         site_description = site_description,
+         latitude, longitude) %>%
+  distinct() %>%
+  filter(!is.na(latitude)) %>%
+  st_as_sf(coords = c("longitude",
+                      "latitude"),
+           crs = 4326) %>%
+  st_transform(crs = 5070)
+
+#-----------------------------------------------------------------
+# download the NHDPlus v2 flowlines
+# do you want flowlines downstream of root site? Set to TRUE if you have downstream sites
+dwn_flw = T
+nhd_list = queryFlowlines(sites_sf = sites_sf,
+                          root_site_code = root_site,
+                          min_strm_order = 2,
+                          dwnstrm_sites = dwn_flw,
+                          dwn_min_stream_order_diff = 4)
+
+# compile the upstream and downstream flowlines
+flowlines = nhd_list$flowlines
+if(dwn_flw) {
+  flowlines %<>%
+    rbind(nhd_list$dwn_flowlines)
 }
-site_list[['Wenatchee']] = c('RIA', site_list[['Wenatchee']])
-site_list[['Entiat']] = c('RRF', 'WEH', site_list[['Entiat']])
-site_list[['Methow']] = c('WEA', site_list[['Methow']])
 
-# Save file.
-save(configuration,
-     site_df,
-     site_list,
-     file = 'analysis/data/derived_data/site_config.rda')
+# upstream extent of study area (cut off areas further upstream)
+upstrm_loc = "Chief Joseph Dam"
+
+library(ggmap)
+
+upstrm_comid = ggmap::geocode(upstrm_loc, output = "latlon") %>%
+  st_as_sf(coords = c("lon", "lat"),
+           crs = 4326) %>%
+  nhdplusTools::discover_nhdplus_id()
+
+nhd_upstrm_lst = nhdplusTools::plot_nhdplus(outlets = list(upstrm_comid),
+                                            streamorder = min(nhd_list$flowlines$StreamOrde),
+                                            actually_plot = F)
+
+flowlines %<>%
+  anti_join(nhd_upstrm_lst$flowline %>%
+              st_drop_geometry() %>%
+              select(Hydroseq))
+#-----------------------------------------------------------------
+# plot the flowlines and the sites
+ggplot() +
+  geom_sf(data = flowlines,
+          aes(color = as.factor(StreamOrde),
+              size = StreamOrde)) +
+  scale_color_viridis_d(direction = -1,
+                        option = "D",
+                        end = 0.8) +
+  scale_size_continuous(range = c(0.2, 1.2),
+                        guide = 'none') +
+  # geom_sf(data = nhd_list$basin,
+  #         fill = NA,
+  #         lwd = 2) +
+  # this cuts out parts of the basin upstream of upstrm_loc
+  geom_sf(data = flowlines %>%
+            filter(!Hydroseq %in% nhd_list$dwn_flowlines$Hydroseq) %>%
+            summarise(bndry = 'basin') %>%
+            select(bndry) %>%
+            st_convex_hull(),
+          fill = NA,
+          lwd = 2) +
+  geom_sf(data = sites_sf,
+          size = 4,
+          color = "black") +
+  geom_sf_label(data = sites_sf,
+                aes(label = site_code)) +
+  geom_sf_label(data = sites_sf %>%
+                  filter(site_code == root_site),
+                aes(label = site_code),
+                color = "red") +
+  theme_bw() +
+  theme(axis.title = element_blank()) +
+  labs(color = "Stream\nOrder")
 
 
 #-----------------------------------------------------------------
-# which sites are in site_df, but not in the PTAGIS configuration file?
-site_df %>%
-  filter(!(SiteID %in% configuration$SiteID |
-             SiteID %in% configuration$Node))
+# build parent child table
+parent_child = sites_sf %>%
+  # filter(! site_code %in% c("MC1", "MC2", "MCJ",
+  #                           "FDD",
+  #                           "MWC",
+  #                           "YHC",
+  #                           "HN1", "HN3",
+  #                           "HSM", "HSU",
+  #                           "LOR",
+  #                           "EWC",
+  #                           "LBT",
+  #                           "LTP",
+  #                           "BBP", "BCP",
+  #                           "MRT", "HSL",
+  #                           "ENM", 'ENS', 'TY4', '3D4')) %>%
+  buildParentChild(flowlines,
+                   # rm_na_parent = T,
+                   add_rkm = F) %>%
+  editParentChild(fix_list = list(c("JDA", 'ICH', "PRA"),
+                                  c("JDA", 'RSH', "PRA"),
+                                  c("JDA", 'JD1', "PRA"),
+                                  c("JDA", 'PRO', "PRA"),
+                                  c("JDA", 'TMF', "PRA"),
+                                  c("JDA", 'PRV', "PRA"),
+                                  c(NA, "JDA", 'PRA'),
+                                  c("RSH", 'PRH', 'PRA'),
+                                  c("ICL", 'TUM', "LWE"),
+                                  c("LNF", 'ICM', "ICL"),
+                                  c(NA, "LNF", "ICL"),
+                                  c("RIA", 'EBO', 'RRF'),
+                                  c("EBO", "WEA", 'RRF'),
+                                  c("EBO", "WEH", 'RRF'),
+                                  c("EBO", "ENL", "RRF"),
+                                  c("WEH", "LMR", "WEA"),
+                                  c("WEH", "OKL", "WEA"),
+                                  c("WEH", "FST", 'WEA'),
+                                  c("EHL", 'ENA', 'ENL'),
+                                  c("EHL", 'MAD', 'ENL'),
+                                  c("METH", "MRW", "MRC"),
+                                  c("SCP", "METH", "MSH"),
+                                  c("SCP", 'MSH', 'MRC'),
+                                  c("WHS", "OKC", "ZSL"),
+                                  c("WHS", "ZSL", "OKL"),
+                                  c("ZSL", 'OKV', 'OKC'),
+                                  c("JOH", 'WHS', 'OKL'),
+                                  c("JOH", 'BPC', 'OKL'),
+                                  c("JOH", 'ANT', 'OKL'),
+                                  c("JOH", 'TNK', 'OKL'),
+                                  c("JOH", 'AEN', 'OKL')),
+                  switch_parent_child = list(c("RSH", "PRA"))) %>%
+  filter(!parent %in% c("WEH", "PRH"))
+
+# add RKMs from configuration file (since we had to fix at least one from PTAGIS)
+parent_child %<>%
+  left_join(configuration %>%
+              select(parent = site_code,
+                     parent_rkm = rkm) %>%
+              distinct(),
+            by = "parent") %>%
+  left_join(configuration %>%
+              select(child = site_code,
+                     child_rkm = rkm) %>%
+              distinct(),
+            by = "child") %>%
+  distinct()
+
+
+sites_df = writeOldNetworks()$PriestRapids %>%
+  mutate(across(c(SiteID, Step3),
+                recode,
+                "BelowJD1" = "JDA"),
+         path = str_replace(path, "BelowJD1", "JDA")) %>%
+  rename(site_code = SiteID)
+
+ques_locs = sites_df %>%
+  # filter(grepl('Wenatchee', path)) %>%
+  # filter(grepl("Entiat", path)) %>%
+  # filter(grepl('Methow', path)) %>%
+  filter(grepl("Okanogan", path)) %>%
+  pull(site_code)
+
+parent_child %>%
+  filter(parent %in% ques_locs |
+           child %in% ques_locs) %>%
+  buildPaths() %>%
+  left_join(sites_df %>%
+              select(end_loc = site_code,
+                     org_path = path))
+
+#-----------------------------------------------------------------
+# Save file.
+save(configuration,
+     sites_sf,
+     flowlines,
+     parent_child,
+     file = here('analysis/data/derived_data',
+                 'site_config.rda'))
+
 
 #-----------------------------------------------------------------
 # Build network diagram
-#-----------------------------------------------------------------
-library(tidygraph)
+# simple
+pc_graph = plotNodes(parent_child,
+                     layout = "tree")
+
+pc_nodes_graph = parent_child %>%
+  addParentChildNodes(configuration) %>%
+  plotNodes()
+
+# control more settings
+node_order = buildNodeOrder(parent_child) %>%
+  separate(col = path,
+           into = paste("step", 1:max(.$node_order), sep = "_"),
+           remove = F) %>%
+  mutate(branch_nm = if_else(grepl('LWE', path),
+                             "Wenatchee",
+                             if_else(grepl("ENL", path),
+                                     "Entiat",
+                                     if_else(grepl("LMR", path),
+                                             "Methow",
+                                             if_else(grepl("OKL", path),
+                                                     "Okanogan",
+                                                     if_else(step_2 != "RIA" & !is.na(step_2),
+                                                     "Downstream",
+                                                     "Other")))))) %>%
+  select(-starts_with("step"))
+
+nodes = buildNodeGraph(parent_child) %>%
+  as_tibble() %>%
+  left_join(node_order %>%
+              select(label = node,
+                     branch_nm))
+edges = parent_child %>%
+  left_join(nodes, by = c('parent' = 'label')) %>%
+  rename(from = index) %>%
+  left_join(nodes, by = c('child' = 'label')) %>%
+  rename(to = index) %>%
+  select(from, to)
+
 library(ggraph)
-library(netplot)
+node_graph = tidygraph::tbl_graph(nodes = nodes,
+                                  edges = edges)
 
-# build parent-child table
-# which spawn year are we dealing with?
-yr = 2020
-# start date is July 1 of the previous year
-start_date = paste0(yr - 1, '0701')
-
-# build parent-child table
-par_ch_node = createParentChildDf(site_df,
-                                  configuration,
-                                  startDate = start_date)
-
-root_node = par_ch_node %>%
-  filter(nodeOrder == 1) %>%
-  pull(ParentNode)
-
-par_ch_site = createParentChildDf(site_df,
-                                  configuration %>%
-                                    mutate(Node = if_else(grepl('A0$', Node) | grepl('B0$', Node),
-                                                         SiteID,
-                                                         Node)) %>%
-                                    distinct(),
-                                  startDate = start_date) %>%
-  rename(ParentSite = ParentNode,
-         ChildSite = ChildNode) %>%
-  left_join(stack(site_list) %>%
-              tbl_df() %>%
-              select(Group = ind,
-                     ChildSite = values) %>%
-              bind_rows(tibble(Group = root_node,
-                               ChildSite = root_node)) %>%
-              mutate(Group = factor(Group,
-                                    levels = c(root_node, names(site_list)))) %>%
-              mutate(BranchNum = as.integer(Group))) %>%
-  left_join(configuration %>%
-              select(ChildSite = SiteID,
-                     lat = Latitude,
-                     long = Longitude) %>%
-              distinct()) %>%
-  mutate(lat = if_else(is.na(lat) & ChildSite == 'BelowJD1',
-                       configuration %>%
-                         filter(SiteID == 'CHINOR') %>%
-                         pull(Latitude),
-                       lat),
-         long = if_else(is.na(long) & ChildSite == 'BelowJD1',
-                        configuration %>%
-                          filter(SiteID == 'CHINOR') %>%
-                          pull(Longitude),
-                        long))
-
-# add nodes for black boxes
-bb_nodes = par_ch_site %>%
-  group_by(ParentSite) %>%
-  summarise(nChild = n_distinct(ChildSite)) %>%
-  filter(nChild > 1) %>%
-  left_join(par_ch_site %>%
-              select(-ParentSite,
-                     ParentSite = ChildSite,
-                     SiteType:long)) %>%
-  mutate(SiteType = 'BB') %>%
-  mutate(ChildSite = paste0(ParentSite, '_bb')) %>%
-  select(-nChild) %>%
-  distinct()
-
-par_ch_site %<>%
-  bind_rows(bb_nodes)
-
-# build table of nodes
-nodes = par_ch_site %>%
-  select(ParentSite, ChildSite) %>%
-  gather(type, node) %>%
-  select(node) %>%
-  distinct() %>%
-  left_join(par_ch_site %>%
-              rename(node = ChildSite) %>%
-              select(-starts_with("Parent"))) %>%
-  mutate(Group = as.factor(Group),
-         Group = fct_relevel(Group, root_node)) %>%
-  arrange(Group, RKM, nodeOrder) %>%
-  mutate(index = 1:n()) %>%
-  select(index, label = node, everything())
-
-nodes %<>%
-  mutate(Group = if_else(label %in% c('PRA', 'PRA_bb', 'RIA', 'RRF', 'WEA'),
-                         'Mainstem',
-                         as.character(Group)),
-         Group = factor(Group,
-                        levels = c('Mainstem',
-                                   'BelowPriest',
-                                   'Wenatchee',
-                                   'Entiat',
-                                   'Methow',
-                                   'Okanogan')),
-         Group = fct_drop(Group))
-
-nodes %<>%
-  left_join(par_ch_site %>%
-              group_by(label = ParentSite) %>%
-              summarise(nChilds = n_distinct(ChildSite)) %>%
-              bind_rows(par_ch_site %>%
-                          filter(!ChildSite %in% ParentSite) %>%
-                          select(label = ChildSite) %>%
-                          mutate(nChilds = 0)) %>%
-              mutate(nodeType = if_else(nChilds == 0,
-                                        'Terminal',
-                                        if_else(nChilds == 1,
-                                                'PassThru', 'Branch')))) %>%
-  mutate(nodeType = if_else(SiteType == 'BB',
-                            'BB', nodeType),
-         nodeType = factor(nodeType,
-                           levels = c('Branch',
-                                      'PassThru',
-                                      'Terminal',
-                                      'BB')))
-
-
-# build table of edges (connecting nodes)
-edges = par_ch_site %>%
-  filter(ParentSite != ChildSite) %>%
-  select(from = ParentSite,
-         to = ChildSite) %>%
-  distinct() %>%
-  mutate(edgeID = 1:n()) %>%
-  gather(direction, label, -edgeID) %>%
-  left_join(nodes %>%
-              select(index, label)) %>%
-  select(-label) %>%
-  spread(direction, index) %>%
-  select(-edgeID)
-
-# one graph with all sites
-myGraph = tbl_graph(nodes = nodes,
-                    edges = edges)
-
-
-#--------------------------------------------------
-# tidygraph
-
-# myLayout = c('kk')
-# myLayout = c('dendrogram')
-# myLayout = c('treemap')
-myLayout = c('partition')
-# myLayout = c('circlepack')
-myLayout = c('star', 'circle', 'gem', 'dh', 'graphopt', 'grid', 'mds',
-             'randomly', 'fr', 'kk', 'drl', 'lgl')[9]
-#
-# c('star', 'dh', 'lgl')
-
-set.seed(8)
-allGr_p = myGraph %>%
-  # ggraph(layout = 'igraph',
-  #        algorithm = 'nicely') +
-  # ggraph(layout = 'igraph',
-  #        algorithm = 'fr') +
-  ggraph(layout = myLayout) +
-  geom_edge_diagonal() +
-  # geom_edge_link() +
-  # geom_node_point(aes(color = Group,
-  #                     shape = nodeType),
-  #                 size = 7) +
-  geom_node_point(aes(color = Group),
-                  size = 7) +
+node_p = node_graph %>%
+  ggraph(layout = "tree") +
+  geom_edge_link(arrow = arrow(length = unit(2, 'mm'),
+                               type = "closed"),
+                 end_cap = circle(4, 'mm')) +
+  geom_node_point(size = 7,
+                  aes(color = branch_nm)) +
+  theme_graph(base_family = 'Times') +
+  theme(legend.position = 'none') +
+  scale_color_brewer(palette = "Set1",
+                     na.value = "black") +
   geom_node_label(aes(label = label),
-                  # repel = T,
                   size = 2,
                   label.padding = unit(0.1, 'lines'),
-                  label.size = 0.1) +
-  # geom_node_text(aes(label = label),
-  #                 # repel = T,
-  #                 size = 2) +
-  scale_color_brewer(palette = 'Set1',
-                     guide = 'none') +
-  scale_shape_manual(values = c('Branch' = 19,
-                                'PassThru' = 18,
-                                'Terminal' = 15,
-                                'BB' = 22),
-                     guide = 'none') +
-  theme_graph(base_family = 'Times') +
-  theme(legend.position = 'bottom')
-allGr_p
+                  label.size = 0.1)
 
-ggsave('analysis/figures/UC_SiteSchematic_2020.pdf',
-       allGr_p,
-       width = 15,
-       height = 5,
-       dpi = 600)
+node_p
 
-
-#--------------------------------------------------
-# netplot
-set.seed(8)
-# l = igraph::layout_with_fr(myGraph)
-# l = igraph::layout_with_kk(myGraph)
-l = igraph::layout_with_dh(myGraph)
-# l = igraph::layout_with_gem(myGraph)
-# l = igraph::layout_nicely(myGraph)
-# l = igraph::layout_on_grid(myGraph)
-# l = igraph::layout_in_circle(myGraph)
-# l = igraph::layout_with_graphopt(myGraph)
-# l = igraph::layout_with_sugiyama(myGraph)
-l = igraph::layout_as_tree(myGraph,
-                           circular = T,
-                           flip.y = F)
-
-# l = igraph::layout_with_lgl(myGraph,
-#                             root = 1)
-#
-# l = igraph::layout_with_mds(myGraph,
-#                             dist = dist(st_coordinates(nodes_sf),
-#                                         method = 'euclidean',
-#                                         diag = T,
-#                                         upper = T) %>%
-#                               as.matrix(),
-#                             dim = 2)
-
-# set of colors
-myColors = RColorBrewer::brewer.pal(nlevels(nodes$Group), 'Set1')
-# myColors = viridis::plasma(nlevels(nodes$Group))
-# myColors = gray.colors(nlevels(nodes$Group), start = 0.3, end = 0.9)
-# myColors = c(rep('darkgray', 3), 'black')
-
-# myColors = sample(myColors, length(myColors))
-
-# myLabs = nodes$label
-# myLabs[grepl('_bb$', myLabs)] = NA
-
-prd_sites = nplot(myGraph,
-                  layout = l,
-                  vertex.color = myColors[nodes$Group],
-                  # vertex.color = myColors[nodes$nodeType],
-                  vertex.size = 1,
-                  # vertex.size.range = c(0.1, 0.03),
-                  # vertex.nsides = c(100, 3, 4, 4)[nodes$nodeType],
-                  vertex.nsides = 100,
-                  # vertex.rot = c(0, 1.55, 0.78, 0.78)[nodes$nodeType],
-                  vertex.label = nodes$label,
-                  vertex.label.fontsize = 5,
-                  edge.curvature = pi/6,
-                  zero.margins = T)
-prd_sites
-
-pdf('analysis/figures/UC_SiteSchematic_v3.pdf',
-    width = 8,
-    height = 6)
-print(prd_sites)
-dev.off()
-
-#--------------------------------------------------
-# igraph
-library(igraph)
-l = igraph::layout_as_tree(myGraph,
-                           flip.y = F)
-
-# set of colors
-myColors = RColorBrewer::brewer.pal(nlevels(nodes$Group), 'Set1')
-# myColors = viridis::plasma(nlevels(nodes$Group))
-# myColors = viridis::viridis(nlevels(nodes$Group))
-# myColors = gray.colors(nlevels(nodes$Group), start = 0.3, end = 0.9)
-# myColors = c(rep('darkgray', 3), 'black')
-
-# this will open up a Quartz window and let you edit the layout with your mouse
-id = tkplot(myGraph,
-            layout = l,
-            canvas.width = 1400,
-            canvas.height = 800,
-            vertex.color = myColors[nodes$Group],
-            # vertex.color = myColors[nodes$nodeType],
-            # vertex.color = 'gray90',
-            vertex.shape = c('circle', 'square')[1],
-            # vertex.shape = c('circle', 'diamond', 'square', 'square')[nodes$nodeType],
-            vertex.size = 16,
-            # label = nodes$label,
-            label.size = 1,
-            label.color = 'red',
-            edge.color = 'black')
-
-# for saving
-tk_postscript(tkp.id = id)
-
-tk_close(tkp.id = id)
-tk_off()
-
+# save as pdf
+library(here)
+ggsave(here("analysis/figures",
+            "PriestRapids_DABOM_sites.pdf"),
+       node_p,
+       width = 9,
+       height = 6)
