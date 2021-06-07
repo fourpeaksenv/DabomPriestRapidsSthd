@@ -23,7 +23,7 @@ library(lubridate)
 # set year
 yr = 2020
 
-for(yr in 2016:2019) {
+# for(yr in 2016:2019) {
   cat(paste('Working on', yr, '\n'))
 
   load(paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
@@ -150,7 +150,7 @@ for(yr in 2016:2019) {
   rm(dabom_mod, dabom_list, proc_list, parent_child, bio_df,
      proc_ch, jags_data, init_fnc, mod_path, dabom_df, start_date, jags_params)
 
-}
+# }
 
 #------------------------------------------------------------------------------
 # diagnostics
