@@ -130,6 +130,10 @@ configuration = org_config %>%
          node = if_else(site_code == 'EHL' & config_id == 110 & antenna_id %in% c('01', '02'),
                         'EHLA0',
                         node),
+         # combine a couple sites in the Entiat
+         node = if_else(site_code %in% c("ENS", "ENM"),
+                        "ENAA0",
+                        node),
          node = if_else(site_code == "WEH" & antenna_id == "A2",
                         "WEHB0",
                         node),
