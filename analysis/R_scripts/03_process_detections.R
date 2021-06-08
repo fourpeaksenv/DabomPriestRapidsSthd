@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: clean PTAGIS data with PITcleanr
 # Created: 4/27/20
-# Last Modified: 11/12/20
+# Last Modified: 6/8/21
 # Notes:
 
 #-----------------------------------------------------------------
@@ -11,318 +11,214 @@ library(tidyverse)
 library(lubridate)
 library(readxl)
 library(magrittr)
+library(here)
 
 #-----------------------------------------------------------------
 # load configuration and site_df data
-load('analysis/data/derived_data/site_config.rda')
+load(here('analysis/data/derived_data/site_config.rda'))
 
 # which spawn year are we dealing with?
 yr = 2020
 
-# for(yr in 2011:2020) {
-  # start date is June 1 of the previous year
-  start_date = paste0(yr - 1, '0601')
+# load and file biological data
+bio_df = read_rds(here('analysis/data/derived_data/Bio_Data_2011_2020.rds')) %>%
+  filter(year == yr)
 
-  # ensure that WVT nodes are included, even after antennas disappeared (configID >= 170, yr >= 2019)
-  if(yr >= 2019) {
-    configuration %<>%
-      mutate(EndDate = if_else(grepl('WVT', Node),
-                               NA_POSIXct_,
-                               EndDate))
-  }
-
-  # build parent-child table
-  parent_child = createParentChildDf(site_df,
-                                     configuration,
-                                     startDate = start_date)
-
-  # get raw observations from PTAGIS
-  # These come from running a saved query on the list of tags to be used
-  observations = read_csv(paste0('analysis/data/raw_data/PTAGIS/UC_Sthd_', yr, '_CTH.csv')) %>%
-    filter(`Event Site Code Value` != "ORPHAN")
-
-  # add some observations from Colockum (CLK), a temporary antenna that only operated in some years
-  if(yr %in% c(2015, 2018) ) {
-    clk_obs = read_csv('analysis/data/raw_data/WDFW/CLK_observations.csv') %>%
-      mutate(`Event Type Name` = "Observation",
-             `Event Site Code Value` = 'CLK',
-             `Antenna ID` = 'A1',
-             `Antenna Group Configuration Value` = 100,
-             `CTH Count` = 1) %>%
-      mutate(time = if_else(is.na(time),
-                            hms::hms(seconds = 0,
-                                     minutes = 0,
-                                     hours = 12),
-                            time)) %>%
-      # mutate(`Event Date Time Value` = paste(date, str_sub(time, 1, 5))) %>%
-      mutate(`Event Date Time Value` = paste(date, time)) %>%
-      mutate(obs_date = lubridate::mdy_hms(`Event Date Time Value`)) %>%
-      filter(year(obs_date) == yr) %>%
-      select(-date, -time, -obs_date) %>%
-      # get the origin info for these fish
-      left_join(observations %>%
-                  select(`Tag Code`,
-                         `Mark Species Name`,
-                         `Mark Rear Type Name`) %>%
-                  distinct())
-
-    observations %<>%
-      bind_rows(clk_obs)
-
-    rm(clk_obs)
-  }
-
-  # process those observations with PITcleanr, using Priest Rapids-specific function
-  proc_list = processCapHist_PRD(startDate = start_date,
-                                 configuration = configuration,
-                                 parent_child = parent_child,
-                                 observations = observations,
-                                 last_obs_date = format(ymd(start_date) + years(1) + months(1), "%Y%m%d"),
-                                 truncate = T,
-                                 site_df = site_df,
-                                 step_num = 1,
-                                 save_file = T,
-                                 file_name = paste0('outgoing/PITcleanr/UC_Steelhead_', yr, '.xlsx'))
+# any double-tagged fish?
+dbl_tag = bio_df %>%
+  filter(!is.na(tag_other))
 
 
-  # how many tags need to be examined for "weird" capture histories?
-  proc_list$ProcCapHist %>%
-    select(TagID, UserProcStatus) %>%
-    distinct() %>%
-    janitor::tabyl(UserProcStatus) %>%
-    janitor::adorn_totals() %>%
-    janitor::adorn_pct_formatting()
+#-----------------------------------------------------------------
+# start date is June 1 of previous year
+start_date = paste0(yr - 1, '0601')
+# when is the last possible observation date?
+max_obs_date = paste0(yr, "0531")
 
-  # create node order and list of nodes within several population groups
-  node_order = createNodeOrder(proc_list$ValidPaths,
-                               configuration) %>%
-    left_join(stack(site_list) %>%
-                tbl_df() %>%
-                select(Group = ind,
-                       NodeSite = values) %>%
-                mutate(BranchNum = as.integer(Group))) %>%
+# get raw observations from PTAGIS
+# These come from running a saved query on the list of tags to be used
+ptagis_file = here("analysis/data/raw_data/PTAGIS",
+                   paste0("UC_Sthd_", yr, "_CTH.csv"))
+
+# recode the PTAGIS observations of double tagged fish so that the tag code matches the TagID (not TagOther)
+ptagis_obs = readCTH(ptagis_file)
+
+# add some observations from Colockum (CLK), a temporary antenna that only operated in some years
+if(yr %in% c(2015, 2018) ) {
+  clk_obs = read_csv(here('analysis/data/raw_data/WDFW/CLK_observations.csv')) %>%
+    rename(tag_code = `Tag Code`) %>%
+    mutate(event_type_name = "Observation",
+           event_site_code_value = 'CLK',
+           antenna_id = 'A1',
+           antenna_group_configuration_value = 100,
+           cth_count = 1) %>%
+    mutate(time = if_else(is.na(time),
+                          hms::hms(seconds = 0,
+                                   minutes = 0,
+                                   hours = 12),
+                          time)) %>%
+    mutate(event_date_time_value = paste(date, time)) %>%
+    mutate(across(event_date_time_value,
+                  lubridate::mdy_hms)) %>%
+    filter(year(event_date_time_value) == yr) %>%
+    select(-date, -time) %>%
+    # get the origin info for these fish
+    left_join(ptagis_obs %>%
+                select(tag_code,
+                       mark_species_name,
+                       mark_rear_type_name) %>%
+                distinct())
+
+  ptagis_obs %<>%
+    bind_rows(clk_obs)
+
+  rm(clk_obs)
+}
+
+if(nrow(dbl_tag) > 0) {
+  ptagis_obs %<>%
+    left_join(dbl_tag %>%
+                mutate(fish_id = 1:n()) %>%
+                select(fish_id, starts_with("tag")) %>%
+                mutate(use_tag = tag_code) %>%
+                pivot_longer(cols = starts_with("tag"),
+                             names_to = "source",
+                             values_to = "tag_code") %>%
+                select(tag_code, use_tag),
+              by = "tag_code") %>%
+    rowwise() %>%
+    mutate(tag_code = if_else(!is.na(use_tag),
+                              use_tag,
+                              tag_code)) %>%
+    ungroup() %>%
+    select(-use_tag) %>%
     distinct()
+}
 
-  proc_list$NodeOrder = node_order
+# any orphaned or disowned tags?
+qcTagHistory(ptagis_obs, T)
 
-  # fix a couple detections (not caught by PITcleanr)
-  if(yr == 2013) {
-    proc_list$ProcCapHist %<>%
-      mutate_at(vars(AutoProcStatus),
-                list(as.character)) %>%
-      mutate_at(vars(AutoProcStatus, UserProcStatus),
-                list(~ if_else(TagID == "3D9.1C2DF7373B" & grepl('ENA', Node),
-                               as.character(FALSE),
-                               .))) %>%
-      mutate_at(vars(AutoProcStatus),
-                list(as.logical))
-  }
-
-  if(yr == 2019) {
-    proc_list$ProcCapHist %<>%
-      mutate_at(vars(AutoProcStatus),
-                list(as.character)) %>%
-      mutate_at(vars(AutoProcStatus, UserProcStatus),
-                list(~ if_else(TagID == "3DD.0077A0D6E8" & grepl('ENA', Node),
-                               as.character(FALSE),
-                               .))) %>%
-      mutate_at(vars(AutoProcStatus),
-                list(as.logical))
-  }
+# compress and process those observations with PITcleanr
+prepped_ch = PITcleanr::prepWrapper(ptagis_file = ptagis_obs,
+                                    configuration = configuration,
+                                    parent_child = parent_child %>%
+                                      addParentChildNodes(configuration = configuration),
+                                    min_obs_date = start_date,
+                                    max_obs_date = max_obs_date,
+                                    ignore_event_vs_release = T,
+                                    save_file = T,
+                                    file_name = here('outgoing/PITcleanr', paste0('UC_Steelhead_', yr, '.xlsx')))
 
 
-  # save some stuff
-  save(yr, start_date, parent_child, proc_list,
-       file = paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
-# }
+
+# save some stuff
+save(parent_child, configuration, start_date, bio_df, prepped_ch,
+     file = here('analysis/data/derived_data/PITcleanr',
+                 paste0('UC_Steelhead_', yr, '.rda')))
 
 #-------------------------------------------
 # NEXT STEPS
 #-------------------------------------------
-# open that Excel file, and filter on the column UserProcStatus, looking for blanks. Fill in each row with TRUE or FALSE, depending on whether that observation should be kept or not. The column AutoProcStatus provides a suggestion, but the biologist's best expert judgement should be used.
-
-#-------------------------------------------
-# which sites never have detections that appear in PTAGIS?
-#-------------------------------------------
-all_proc_ch = 2011:2019 %>%
-  as.list() %>%
-  rlang::set_names() %>%
-  map_df(.id = "Year",
-         .f = function(yr) {
-           load(paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
-           return(proc_list$ProcCapHist)
-         })
-
-all_proc_ch %>%
-  group_by(Year) %>%
-  summarise(n_tot_tags = n_distinct(TagID),
-            n_weird_tags = n_distinct(TagID[UserProcStatus == '']),
-            perc_weird = n_weird_tags / n_tot_tags)
-
-
-site_df %>%
-  select(SiteID) %>%
-  anti_join(all_proc_ch %>%
-              select(SiteID, Node))
-
-all_proc_ch %>%
-  filter(grepl('MSH', Node)) %>%
-  select(Year:Node) %>%
-  xtabs(~ Year + SiteID, .)
-
-#-------------------------------------------
-# After receiving cleaned up file back...
-#-------------------------------------------
-load(paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
-
-proc_ch = read_excel(paste0('analysis/data/derived_data/WDFW/UC_Steelhead_', yr, '.xlsx')) %>%
-  mutate_at(vars(AutoProcStatus:ValidPath),
-            list(as.logical)) %>%
-  mutate_at(vars(BranchNum, NodeOrder),
-            list(as.integer)) %>%
-  mutate_at(vars(TrapDate),
-            list(lubridate::ymd)) %>%
-  mutate_at(vars(ObsDate, lastObsDate),
-            list(lubridate::ymd_hms)) %>%
-  mutate_at(vars(TrapDate),
-            list(lubridate::floor_date),
-            unit = "days") %>%
-  select(-Group) %>%
-  left_join(proc_list$NodeOrder %>%
-              select(Node, Group)) %>%
-  select(one_of(names(proc_list$ProcCapHist)))
-
-
-proc_ch %>%
-  select(TagID, SiteID, Node) %>%
-  distinct() %>%
-  anti_join(proc_list$ProcCapHist %>%
-              select(TagID, Node) %>%
-              distinct()) %>%
-  xtabs(~ SiteID, .)
-
-proc_list$ProcCapHist %>%
-  select(TagID, SiteID, Node) %>%
-  distinct() %>%
-  anti_join(proc_ch %>%
-              select(TagID, Node, UserProcStatus) %>%
-              distinct()) %>%
-  xtabs(~ SiteID, .)
-
-# overwrite previously saved capture histories
-proc_list$ProcCapHist = proc_ch
-
-# get the biological data associated with each tag
-file_nms = list.files('analysis/data/derived_data')
-bio_nm = file_nms[grepl('Bio', file_nms) & grepl('.rds$', file_nms)]
-
-bio_df = read_rds(paste0('analysis/data/derived_data/', bio_nm[length(bio_nm)])) %>%
-  filter(Year == yr,
-         TagID %in% unique(proc_list$ProcCapHist$TagID))
-
-# any duplicated tags?
-bio_df %>%
-  filter(TagID %in% TagID[duplicated(TagID)]) %>%
-  arrange(TagID, TrapDate) %>%
-  as.data.frame()
-
-# keep the data from the first time fish was caught (has all the age data associated with it)
-bio_df %<>%
-  group_by(TagID) %>%
-  filter(TrapDate == min(TrapDate)) %>%
-  ungroup()
-
-
-# re-save some stuff
-save(yr, start_date, parent_child, proc_list, bio_df,
-     file = paste0('analysis/data/derived_data/PITcleanr/UC_Steelhead_', yr, '.rda'))
-
+# open that Excel file, and filter on the column user_keep_obs, looking for blanks. Fill in each row with TRUE or FALSE, depending on whether that observation should be kept or not. The column auto_keep_obs provides a suggestion, but the biologist's best expert judgment should be used based on detection dates, detection locations before and after, etc.
 
 #-----------------------------------------------------------------
 # tag summaries
 #-----------------------------------------------------------------
-
-# Fix UserProcStatus, and summarise tag data
-tag_summ = proc_list$ProcCapHist %>%
-  filter(UserProcStatus) %>%
-  summariseTagData(trap_data = bio_df %>%
-                     filter(Year == yr,
-                            TagID %in% unique(proc_list$ProcCapHist$TagID)))
+# use auto_keep_obs for the moment
+tag_summ = summarizeTagData(prepped_ch %>%
+                              mutate(user_keep_obs = auto_keep_obs),
+                            bio_df %>%
+                              group_by(tag_code) %>%
+                              slice(1) %>%
+                              ungroup())
 
 # any duplicated tags?
+sum(duplicated(tag_summ$tag_code))
 tag_summ %>%
-  filter(TagID %in% TagID[duplicated(TagID)]) %>%
-  arrange(TagID, TrapDate) %>%
+  filter(tag_code %in% tag_code[duplicated(tag_code)]) %>%
   as.data.frame()
 
 # where are tags assigned?
-janitor::tabyl(tag_summ, AssignSpawnSite) %>%
-# janitor::tabyl(tag_summ, AssignSpawnNode) %>%
+janitor::tabyl(tag_summ, spawn_node) %>%
   arrange(desc(n)) %>%
   janitor::adorn_totals()
 
-# which branch are tags assigned to?
-tag_summ %>%
-  mutate(Branch = fct_explicit_na(Group,
-                                 'PRA_bb')) %>%
-  janitor::tabyl(Branch, Origin) %>%
-  # janitor::adorn_totals(where = c("row")) %>%
-  janitor::adorn_percentages(denominator = "col") %>%
-  janitor::adorn_pct_formatting()
-  janitor::adorn_totals(where = c("row", "col"))
-
 # preliminary estimate of node efficiency
-node_eff = proc_list$ProcCapHist %>%
-  filter(UserProcStatus) %>%
-  estNodeEff(node_order = proc_list$NodeOrder)
+node_eff = prepped_ch %>%
+  mutate(user_keep_obs = auto_keep_obs) %>%
+  filter(user_keep_obs) %>%
+  estNodeEff(node_order = buildNodeOrder(addParentChildNodes(parent_child, configuration)))
 
 node_eff %>%
-  filter(tagsAtNode > 0,
-         detEff < 1)
-
-node_eff %>%
-  filter(!is.na(detEff),
-         detEff_SE > 0)
-
-node_eff %>%
-  filter(grepl('^LWE', Node))
+  filter(tags_at_node > 0,
+         eff_est < 1)
 
 #-----------------------------------------------------------------
 # examine some of the output
 #-----------------------------------------------------------------
-proc_ch = proc_list$ProcCapHist
-
 # which tags have "strange" capture histories?
-weird_tags = proc_ch %>%
-  filter(UserProcStatus == '') %>%
-  pull(TagID) %>%
-  unique()
+prepped_ch %>%
+  summarise(n_tags = n_distinct(tag_code),
+            n_weird = n_distinct(tag_code[direction == "unknown"]),
+            n_fix = n_distinct(tag_code[is.na(user_keep_obs)]),
+            prop_weird = n_weird / n_tags,
+            prop_fix = n_fix / n_tags)
 
-length(weird_tags)
-length(weird_tags) / n_distinct(proc_ch$TagID)
+# look at which branch each tag was assigned to for spawning
+brnch_df = buildNodeOrder(addParentChildNodes(parent_child, configuration)) %>%
+  separate(col = path,
+           into = paste("step", 1:max(.$node_order), sep = "_"),
+           remove = F) %>%
+  mutate(branch_nm = if_else(node == "PRA",
+                             "Start",
+                             if_else(grepl('LWE', path) | node %in% c("CLK"),
+                                     "Wenatchee",
+                                     if_else(grepl("ENL", path),
+                                             "Entiat",
+                                             if_else(grepl("LMR", path),
+                                                     "Methow",
+                                                     if_else(grepl("OKL", path) | node %in% c("FST"),
+                                                             "Okanogan",
+                                                             if_else(step_2 != "RIA" & !is.na(step_2),
+                                                                     "Downstream",
+                                                                     "Mainstem"))))))) %>%
+  select(-starts_with("step"))
 
-proc_ch %>%
-  filter(TagID %in% weird_tags) %>%
-  select(TagID:AutoProcStatus) %>%
-  as.data.frame()
+tag_summ %<>%
+  left_join(brnch_df %>%
+              select(spawn_node = node,
+                     branch_nm))
 
-proc_ch %>%
-  filter(TagID == weird_tags[[1]])
-
-
+# how many tags in each branch?
 tag_summ %>%
-  mutate(Population = fct_explicit_na(Group,
-                                      'PRA_bb')) %>%
-  ggplot(aes(x = TrapDate,
-             color = Population,
-             fill = Population)) +
-  geom_density(alpha = 0.2) +
-  # geom_histogram() +
-  # facet_wrap(~ Population) +
-  theme_bw() +
-  scale_color_brewer(palette = 'Set1') +
-  scale_fill_brewer(palette = 'Set1')
+  janitor::tabyl(branch_nm) %>%
+  janitor::adorn_pct_formatting() %>%
+  arrange(desc(n))
 
-# ggsave('outgoing/figures/RunTiming_2020.pdf',
-#        width = 6,
-#        height = 6)
+# age comp in each branch, by sex
+tag_summ %>%
+  filter(!is.na(final_age)) %>%
+  ggplot(aes(x = branch_nm,
+             fill = as.ordered(final_age))) +
+  geom_bar(position = position_fill()) +
+  facet_wrap(~ sex) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45,
+                                   hjust = 1)) +
+  labs(x = "Branch",
+       y = "Percent of Tags",
+       fill = "Age")
+
+
+# look at run timing between branches
+tag_summ %>%
+  ggplot(aes(x = trap_date,
+             color = branch_nm,
+             fill = branch_nm)) +
+  geom_density(alpha = 0.2) +
+  theme_bw() +
+  scale_color_brewer(palette = 'Set1',
+                     name = "Branch") +
+  scale_fill_brewer(palette = 'Set1',
+                    name = "Branch") +
+  labs(x = "Trap Date at Priest Rapids")
