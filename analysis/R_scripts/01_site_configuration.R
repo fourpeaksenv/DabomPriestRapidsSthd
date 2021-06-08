@@ -379,6 +379,7 @@ ggplot() +
 #-----------------------------------------------------------------
 # build parent child table
 parent_child = sites_sf %>%
+  filter(! site_code %in% c("EBO")) %>%
   # filter(! site_code %in% c("MC1", "MC2", "MCJ",
   #                           "FDD",
   #                           "MWC",
@@ -406,10 +407,9 @@ parent_child = sites_sf %>%
                                   c("ICL", 'TUM', "LWE"),
                                   c("LNF", 'ICM', "ICL"),
                                   c(NA, "LNF", "ICL"),
-                                  c("RIA", 'EBO', 'RRF'),
-                                  c("EBO", "WEA", 'RRF'),
-                                  c("EBO", "WEH", 'RRF'),
-                                  c("EBO", "ENL", "RRF"),
+                                  c("RIA", "WEA", 'RRF'),
+                                  c("RIA", "WEH", 'RRF'),
+                                  c("RIA", "ENL", "RRF"),
                                   c("WEH", "LMR", "WEA"),
                                   c("WEH", "OKL", "WEA"),
                                   c("WEH", "FST", 'WEA'),
@@ -455,7 +455,11 @@ ques_locs = sites_df %>%
   # filter(grepl('Wenatchee', path)) %>%
   # filter(grepl("Entiat", path)) %>%
   # filter(grepl('Methow', path)) %>%
-  filter(grepl("Okanogan", path)) %>%
+  # filter(grepl("Okanogan", path)) %>%
+  filter(nchar(Step3) == 3,
+         nchar(Step4) < 6,
+         nchar(Step5) < 6,
+         Step2 != "BelowPriest") %>%
   pull(site_code)
 
 parent_child %>%
@@ -490,17 +494,19 @@ node_order = buildNodeOrder(parent_child) %>%
   separate(col = path,
            into = paste("step", 1:max(.$node_order), sep = "_"),
            remove = F) %>%
-  mutate(branch_nm = if_else(grepl('LWE', path),
-                             "Wenatchee",
-                             if_else(grepl("ENL", path),
-                                     "Entiat",
-                                     if_else(grepl("LMR", path),
-                                             "Methow",
-                                             if_else(grepl("OKL", path),
-                                                     "Okanogan",
-                                                     if_else(step_2 != "RIA" & !is.na(step_2),
-                                                     "Downstream",
-                                                     "Other")))))) %>%
+  mutate(branch_nm = if_else(node == "PRA",
+                             "Start",
+                             if_else(grepl('LWE', path) | node %in% c("CLK"),
+                                     "Wenatchee",
+                                     if_else(grepl("ENL", path),
+                                             "Entiat",
+                                             if_else(grepl("LMR", path),
+                                                     "Methow",
+                                                     if_else(grepl("OKL", path) | node %in% c("FST"),
+                                                             "Okanogan",
+                                                             if_else(step_2 != "RIA" & !is.na(step_2),
+                                                                     "Downstream",
+                                                                     "Other"))))))) %>%
   select(-starts_with("step"))
 
 nodes = buildNodeGraph(parent_child) %>%
@@ -521,6 +527,8 @@ node_graph = tidygraph::tbl_graph(nodes = nodes,
 
 node_p = node_graph %>%
   ggraph(layout = "tree") +
+  # ggraph(layout = "partition") +
+  # ggraph(layout = "kk") +
   geom_edge_link(arrow = arrow(length = unit(2, 'mm'),
                                type = "closed"),
                  end_cap = circle(4, 'mm')) +
@@ -539,8 +547,7 @@ node_p
 
 # save as pdf
 library(here)
-ggsave(here("analysis/figures",
-            "PriestRapids_DABOM_sites.pdf"),
+ggsave(here("analysis/figures/PriestRapids_DABOM_sites.pdf"),
        node_p,
        width = 9,
        height = 6)
