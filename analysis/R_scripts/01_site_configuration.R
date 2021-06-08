@@ -472,8 +472,7 @@ save(configuration,
      sites_sf,
      flowlines,
      parent_child,
-     file = here('analysis/data/derived_data',
-                 'site_config.rda'))
+     file = here('analysis/data/derived_data/site_config.rda'))
 
 
 #-----------------------------------------------------------------
