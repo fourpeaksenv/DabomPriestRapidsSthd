@@ -20,7 +20,7 @@ library(here)
 
 #-----------------------------------------------------------------
 # set year
-yr = 2019
+yr = 2020
 
 #-----------------------------------------------------------------
 # load configuration and site_df data
@@ -63,7 +63,16 @@ brnch_df = buildNodeOrder(addParentChildNodes(parent_child, configuration)) %>%
                                                                  if_else(node == "WEA",
                                                                          "WellsPool",
                                                                          "Other")))))))) %>%
-  select(-starts_with("step"))
+  select(-starts_with("step")) %>%
+  mutate(group = factor(group,
+                        levels = c("Wenatchee",
+                                   "Entiat",
+                                   "Methow",
+                                   "Okanogan",
+                                   "BelowPriest",
+                                   "WellsPool",
+                                   "Start",
+                                   "Other")))
 
 tag_summ %<>%
   left_join(brnch_df,
@@ -242,6 +251,8 @@ pop_summ = escape_post %>%
                         'RSH' = 'BelowPriest',
                         'TMF' = 'BelowPriest',
                         'WEA_bb' = "WellsPool")) %>%
+  mutate(param = factor(param,
+                        levels = levels(brnch_df$group))) %>%
   mutate(origin = recode(origin,
                          '1' = 'W',
                          '2' = 'H')) %>%
@@ -449,8 +460,8 @@ org_summ = tag_summ %>%
   pivot_wider(names_from = "origin",
               values_from = "n_tags",
               values_fill = 0) %>%
-  mutate(prop_W = W / (W + H),
-         prop_H = 1 - prop_W,
+  mutate(prop_H = H / (H + W),
+         prop_W = 1 - prop_H,
          prop_se = sqrt((prop_W * (1 - prop_W)) / (W + H)))
 
 # # origin proportion based on DABOM estimates of abundance in each branch/population
