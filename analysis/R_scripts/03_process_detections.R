@@ -20,6 +20,8 @@ load(here('analysis/data/derived_data/site_config.rda'))
 # which spawn year are we dealing with?
 yr = 2020
 
+# for(yr in 2011:2020) {
+
 # load and file biological data
 bio_df = read_rds(here('analysis/data/derived_data/Bio_Data_2011_2020.rds')) %>%
   filter(year == yr)
@@ -115,6 +117,13 @@ prepped_ch = PITcleanr::prepWrapper(ptagis_file = ptagis_obs,
 save(parent_child, configuration, start_date, bio_df, prepped_ch,
      file = here('analysis/data/derived_data/PITcleanr',
                  paste0('UC_Steelhead_', yr, '.rda')))
+
+
+# rm(start_date, bio_df, prepped_ch,
+#    ptagis_file,
+#    ptagis_obs,
+#    dbl_tag)
+# }
 
 #-------------------------------------------
 # NEXT STEPS
