@@ -27,6 +27,10 @@ yr = 2020
 load(here('analysis/data/derived_data',
           'site_config.rda'))
 
+
+for(yr in 2011:2020) {
+  cat(paste("Working on", yr, "\n\n"))
+
 # load compressed detections and biological data
 load(here('analysis/data/derived_data/PITcleanr',
           paste0('UC_Steelhead_', yr, '.rda')))
@@ -728,3 +732,5 @@ save_list = c(list('Population Escapement' = pop_summ %>%
 writexl::write_xlsx(x = save_list,
                     path = here('outgoing/estimates',
                                 paste0('UC_Steelhead_', yr, '_', format(Sys.Date(), '%Y%m%d'), '.xlsx')))
+
+}
