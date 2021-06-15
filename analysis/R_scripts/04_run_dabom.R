@@ -24,8 +24,8 @@ load(here('analysis/data/derived_data/site_config.rda'))
 # set year
 yr = 2020
 
-for(yr in 2011:2018) {
-  cat(paste("Working on", yr, "\n\n"))
+# for(yr in 2011:2018) {
+#   cat(paste("Working on", yr, "\n\n"))
 
 # load and filter biological data
 bio_df = read_rds(here('analysis/data/derived_data',
@@ -116,8 +116,8 @@ save(dabom_mod, jags_data, filter_obs,
      file = here("analysis/data/derived_data/model_fits",
                  paste0('PRA_DABOM_Steelhead_', yr,'.rda')))
 
-rm(dabom_mod, jags_data, filter_obs)
-}
+# rm(dabom_mod, jags_data, filter_obs)
+# }
 
 #------------------------------------------------------------------------------
 # diagnostics
