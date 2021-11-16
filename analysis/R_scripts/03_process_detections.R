@@ -18,12 +18,12 @@ library(here)
 load(here('analysis/data/derived_data/site_config.rda'))
 
 # which spawn year are we dealing with?
-yr = 2020
+yr = 2021
 
 # for(yr in 2011:2020) {
 
 # load and file biological data
-bio_df = read_rds(here('analysis/data/derived_data/Bio_Data_2011_2020.rds')) %>%
+bio_df = read_rds(here('analysis/data/derived_data/Bio_Data_2011_2021.rds')) %>%
   filter(year == yr)
 
 # any double-tagged fish?
