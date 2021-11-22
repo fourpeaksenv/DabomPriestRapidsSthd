@@ -131,6 +131,7 @@ comp_df = tibble(year = 2011:2020) %>%
 
                           # query dam counts at Priest, Rock Island, Rocky Reach and Wells
                           dam_cnts = list(PriestRapids = "PRD",
+                                          Wanapum = "WAN",
                                           RockIsland = "RIS",
                                           RockyReach = "RRH",
                                           Wells = "WEL",
@@ -243,6 +244,7 @@ comp_tab = comp_df %>%
   unnest(dam_cnts) %>%
   mutate(dam = factor(dam,
                       levels = c("PriestRapids",
+                                 "Wanapum",
                                  "RockIsland",
                                  "RockyReach",
                                  "Wells",
