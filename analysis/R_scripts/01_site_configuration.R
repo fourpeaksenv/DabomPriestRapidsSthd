@@ -3,26 +3,26 @@
 # Created: 4/1/20
 # Last Modified: 6/7/21
 # Notes:
+#
+# # install some needed packages
+# install.packages(c("tidyverse",
+#                    "devtools",
+#                    "here",
+#                    "sf",
+#                    "magritter",
+#                    "readxl",
+#                    "writexl",
+#                    "janitor",
+#                    "rjags",
+#                    "msm",
+#                    "moments",
+#                    "coda"))
+#
+# devtools::install_github("BiomarkABS/STADEM")
+# devtools::install_github("BiomarkABS/PITcleanr")
+# devtools::install_github("BiomarkABS/DABOM")
 
-# install some needed packages
-install.packages(c("tidyverse",
-                   "devtools",
-                   "here",
-                   "sf",
-                   "magritter",
-                   "readxl",
-                   "writexl",
-                   "janitor",
-                   "rjags",
-                   "msm",
-                   "moments",
-                   "coda"))
-
-devtools::install_github("BiomarkABS/STADEM")
-devtools::install_github("BiomarkABS/PITcleanr")
-devtools::install_github("BiomarkABS/DABOM")
-
-#------------------------------,-----------------------------------
+#-----------------------------------------------------------------
 # load needed libraries
 library(PITcleanr)
 library(tidyverse)
@@ -117,6 +117,9 @@ configuration = org_config %>%
                         node),
          node = if_else(site_code == 'RRJ',
                         'RRF',
+                        node),
+         node = if_else(site_code == "MAD" & config_id == 110 & antenna_id == "01",
+                        "MADA0",
                         node),
          node = if_else(site_code == 'EHL' & config_id == 100 & antenna_id == '02',
                         'EHLB0',
