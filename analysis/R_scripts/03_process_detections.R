@@ -9,6 +9,7 @@
 library(PITcleanr)
 library(tidyverse)
 library(lubridate)
+library(janitor)
 library(readxl)
 library(magrittr)
 library(here)
@@ -18,7 +19,7 @@ library(here)
 load(here('analysis/data/derived_data/site_config.rda'))
 
 # which spawn year are we dealing with?
-yr = 2021
+yr = 2011
 
 # for(yr in 2011:2020) {
 
@@ -107,8 +108,8 @@ prepped_ch = PITcleanr::prepWrapper(ptagis_file = ptagis_obs,
                                       addParentChildNodes(configuration = configuration),
                                     min_obs_date = start_date,
                                     max_obs_date = max_obs_date,
-                                    ignore_event_vs_release = T,
-                                    save_file = T,
+                                    ignore_event_vs_release = F,
+                                    save_file = F,
                                     file_name = here('outgoing/PITcleanr', paste0('UC_Steelhead_', yr, '.xlsx')))
 
 
@@ -129,6 +130,7 @@ save(parent_child, configuration, start_date, bio_df, prepped_ch,
 # NEXT STEPS
 #-------------------------------------------
 # open that Excel file, and filter on the column user_keep_obs, looking for blanks. Fill in each row with TRUE or FALSE, depending on whether that observation should be kept or not. The column auto_keep_obs provides a suggestion, but the biologist's best expert judgment should be used based on detection dates, detection locations before and after, etc.
+
 
 #-----------------------------------------------------------------
 # tag summaries
