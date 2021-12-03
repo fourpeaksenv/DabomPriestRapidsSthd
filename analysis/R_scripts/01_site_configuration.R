@@ -222,7 +222,7 @@ configuration = org_config %>%
          # grab all sites upstream of Prosser dam, and assign them to PROA0
          node = if_else(site_code != "PRO" &
                           as.integer(stringr::str_split(rkm, '\\.', simplify = T)[,1]) == 539 &
-                          as.integer(stringr::str_split(rkm, '\\.', simplify = T)[,2]) > 76,
+                          as.integer(stringr::str_split(rkm, '\\.', simplify = T)[,2]) >= 76,
                         "PROA0",
                         node),
          node = if_else(site_code == 'ICH',
