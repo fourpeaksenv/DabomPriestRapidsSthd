@@ -19,7 +19,7 @@ library(here)
 load(here('analysis/data/derived_data/site_config.rda'))
 
 # which spawn year are we dealing with?
-yr = 2011
+yr = 2021
 
 # for(yr in 2011:2020) {
 
@@ -109,7 +109,7 @@ prepped_ch = PITcleanr::prepWrapper(ptagis_file = ptagis_obs,
                                     min_obs_date = start_date,
                                     max_obs_date = max_obs_date,
                                     ignore_event_vs_release = F,
-                                    save_file = F,
+                                    save_file = T,
                                     file_name = here('outgoing/PITcleanr', paste0('UC_Steelhead_', yr, '.xlsx')))
 
 
