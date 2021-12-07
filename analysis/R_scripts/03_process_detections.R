@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: clean PTAGIS data with PITcleanr
 # Created: 4/27/20
-# Last Modified: 6/8/21
+# Last Modified: 12/7/21
 # Notes:
 
 #-----------------------------------------------------------------
@@ -109,9 +109,9 @@ prepped_ch = PITcleanr::prepWrapper(ptagis_file = ptagis_obs,
                                     min_obs_date = start_date,
                                     max_obs_date = max_obs_date,
                                     ignore_event_vs_release = F,
+                                    add_tag_detects = T,
                                     save_file = T,
                                     file_name = here('outgoing/PITcleanr', paste0('UC_Steelhead_', yr, '.xlsx')))
-
 
 
 # save some stuff
