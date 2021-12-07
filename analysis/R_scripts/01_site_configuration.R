@@ -113,7 +113,8 @@ configuration = org_config %>%
                         'CHLA0',
                         node),
          node = if_else(site_code == 'EBO',
-                        'RRF',
+                        # 'RRF',
+                        "EBOB0",
                         node),
          node = if_else(site_code == 'RRJ',
                         'RRF',
@@ -361,14 +362,14 @@ ggplot() +
   # geom_sf(data = nhd_list$basin,
   #         fill = NA,
   #         lwd = 2) +
-  # this cuts out parts of the basin upstream of upstrm_loc
-  geom_sf(data = flowlines %>%
-            filter(!Hydroseq %in% nhd_list$dwn_flowlines$Hydroseq) %>%
-            summarise(bndry = 'basin') %>%
-            select(bndry) %>%
-            st_convex_hull(),
-          fill = NA,
-          lwd = 2) +
+  # # this cuts out parts of the basin upstream of upstrm_loc
+  # geom_sf(data = flowlines %>%
+  #           filter(!Hydroseq %in% nhd_list$dwn_flowlines$Hydroseq) %>%
+  #           summarise(bndry = 'basin') %>%
+  #           select(bndry) %>%
+  #           st_convex_hull(),
+  #         fill = NA,
+  #         lwd = 2) +
   geom_sf(data = sites_sf,
           size = 4,
           color = "black") +
@@ -386,7 +387,7 @@ ggplot() +
 #-----------------------------------------------------------------
 # build parent child table
 parent_child = sites_sf %>%
-  filter(! site_code %in% c("EBO")) %>%
+  # filter(! site_code %in% c("EBO")) %>%
   # filter(! site_code %in% c("MC1", "MC2", "MCJ",
   #                           "FDD",
   #                           "MWC",
@@ -417,6 +418,10 @@ parent_child = sites_sf %>%
                                   c("RIA", "WEA", 'RRF'),
                                   c("RIA", "WEH", 'RRF'),
                                   c("RIA", "ENL", "RRF"),
+                                  c("RIA", "EBO", "RRF"),
+                                  c("EBO", "WEH", 'RRF'),
+                                  c("EBO", "WEA", 'RRF'),
+                                  c("EBO", "ENL", 'RRF'),
                                   c("WEH", "LMR", "WEA"),
                                   c("WEH", "OKL", "WEA"),
                                   c("WEH", "FST", 'WEA'),
