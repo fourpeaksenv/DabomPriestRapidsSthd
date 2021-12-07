@@ -16,7 +16,7 @@ library(here)
 
 #-----------------------------------------------------------------
 # set year
-yr = 2011
+yr = 2015
 
 
 # load PITcleanr prepped data
@@ -141,7 +141,9 @@ tag_paths_2 %>%
   filter(str_detect(pitcl_keep_path, "WEH", negate = T)) %>%
   filter(!(str_detect(wdfw_keep_path, "WVT") & str_detect(pitcl_keep_path, "WEA$"))) %>%
   filter(str_detect(wdfw_keep_path, "ENS", negate = T),
-         str_detect(wdfw_keep_path, "ENM", negate = T))
+         str_detect(wdfw_keep_path, "ENM", negate = T)) %>%
+  filter(str_detect(pitcl_keep_path, "LWEA0", negate = T)) %>%
+  filter(str_detect(pitcl_keep_path, "TWISPW", negate = T))
 
 # overwrite saved files
 prepped_ch = new_prepped
