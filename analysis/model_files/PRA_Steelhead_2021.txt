@@ -2,15 +2,15 @@ model {
 
 # Priors for detection probabilities 
 
-	 JDA_p ~ dbeta(1, 1);
-	 JD1B0_p ~ dbeta(1, 1);
-	 JD1A0_p ~ dbeta(1, 1);
-	 TMF_p ~ dbeta(1, 1);
-	 PRV_p ~ dbeta(1, 1);
+	 JDA_p <- 1; # Single array, no upstream detections
+	 JD1B0_p <- 0; # no detections / not in operation
+	 JD1A0_p <- 1; # Single array, no upstream detections
+	 TMF_p <- 1; # Single array, no upstream detections
+	 PRV_p <- 0; # no detections / not in operation
 	 HSTB0_p ~ dbeta(1, 1);
 	 HSTA0_p ~ dbeta(1, 1);
-	 MDRB0_p ~ dbeta(1, 1);
-	 MDRA0_p ~ dbeta(1, 1);
+	 MDRB0_p <- 0; # no detections / not in operation
+	 MDRA0_p <- 1; # Single array, no upstream detections
 	 ICHB0_p ~ dbeta(1, 1);
 	 ICHA0_p ~ dbeta(1, 1);
 	 PROB0_p ~ dbeta(1, 1);
@@ -20,7 +20,7 @@ model {
 	 PRHB0_p ~ dbeta(1, 1);
 	 PRHA0_p ~ dbeta(1, 1);
 	 RIA_p ~ dbeta(1, 1);
-	 CLK_p ~ dbeta(1, 1);
+	 CLK_p <- 0; # no detections / not in operation
 	 LWEB0_p ~ dbeta(1, 1);
 	 LWEA0_p ~ dbeta(1, 1);
 	 MCLB0_p ~ dbeta(1, 1);
@@ -37,8 +37,8 @@ model {
 	 LNFA0_p ~ dbeta(1, 1);
 	 ICMB0_p ~ dbeta(1, 1);
 	 ICMA0_p ~ dbeta(1, 1);
-	 ICUB0_p ~ dbeta(1, 1);
-	 ICUA0_p ~ dbeta(1, 1);
+	 ICUB0_p <- 0; # no detections / not in operation
+	 ICUA0_p <- 0; # no detections / not in operation
 	 TUM_p ~ dbeta(1, 1);
 	 CHWB0_p ~ dbeta(1, 1);
 	 CHWA0_p ~ dbeta(1, 1);
@@ -51,24 +51,24 @@ model {
 	 NALA0_p ~ dbeta(1, 1);
 	 NAUB0_p ~ dbeta(1, 1);
 	 NAUA0_p ~ dbeta(1, 1);
-	 WTLB0_p ~ dbeta(1, 1);
-	 WTLA0_p ~ dbeta(1, 1);
-	 LWNB0_p ~ dbeta(1, 1);
-	 LWNA0_p ~ dbeta(1, 1);
+	 WTLB0_p <- 0; # no detections / not in operation
+	 WTLA0_p <- 0; # no detections / not in operation
+	 LWNB0_p <- 0; # no detections / not in operation
+	 LWNA0_p <- 0; # no detections / not in operation
 	 RRF_p ~ dbeta(1, 1);
-	 EBOB0_p ~ dbeta(1, 1);
+	 EBOB0_p <- 1; # Single array, no upstream detections
 	 ENLB0_p ~ dbeta(1, 1);
 	 ENLA0_p ~ dbeta(1, 1);
 	 RCTB0_p ~ dbeta(1, 1);
 	 RCTA0_p ~ dbeta(1, 1);
-	 EHLB0_p ~ dbeta(1, 1);
-	 EHLA0_p ~ dbeta(1, 1);
+	 EHLB0_p <- 0; # no detections / not in operation
+	 EHLA0_p <- 0; # no detections / not in operation
 	 ENAB0_p ~ dbeta(1, 1);
 	 ENAA0_p ~ dbeta(1, 1);
 	 MADB0_p ~ dbeta(1, 1);
 	 MADA0_p ~ dbeta(1, 1);
-	 ENFB0_p ~ dbeta(1, 1);
-	 ENFA0_p ~ dbeta(1, 1);
+	 ENFB0_p <- 0; # no detections / not in operation
+	 ENFA0_p <- 0; # no detections / not in operation
 	 WEHB0_p ~ dbeta(1, 1);
 	 WEHA0_p ~ dbeta(1, 1);
 	 WEA_p ~ dbeta(1, 1);
@@ -79,25 +79,25 @@ model {
 	 LBCB0_p ~ dbeta(1, 1);
 	 LBCA0_p ~ dbeta(1, 1);
 	 MRCB0_p ~ dbeta(1, 1);
-	 MRCA0_p ~ dbeta(1, 1);
+	 MRCA0_p <- 0; # no detections / not in operation
 	 BVCB0_p ~ dbeta(1, 1);
 	 BVCA0_p ~ dbeta(1, 1);
 	 TWRB0_p ~ dbeta(1, 1);
 	 TWRA0_p ~ dbeta(1, 1);
-	 TWISPW_p ~ dbeta(1, 1);
+	 TWISPW_p <- 1; # Single array, no upstream detections
 	 CRWB0_p ~ dbeta(1, 1);
 	 CRWA0_p ~ dbeta(1, 1);
 	 CRUB0_p ~ dbeta(1, 1);
 	 CRUA0_p ~ dbeta(1, 1);
 	 SCPB0_p ~ dbeta(1, 1);
 	 SCPA0_p ~ dbeta(1, 1);
-	 MSHB0_p ~ dbeta(1, 1);
-	 MSHA0_p ~ dbeta(1, 1);
-	 METHB0_p ~ dbeta(1, 1);
-	 METHA0_p ~ dbeta(1, 1);
+	 MSHB0_p <- 0; # no detections / not in operation
+	 MSHA0_p <- 0; # no detections / not in operation
+	 METHB0_p <- 0; # no detections / not in operation
+	 METHA0_p <- 0; # no detections / not in operation
 	 MRWB0_p ~ dbeta(1, 1);
 	 MRWA0_p ~ dbeta(1, 1);
-	 WFC_p ~ dbeta(1, 1);
+	 WFC_p <- 1; # Single array, no upstream detections
 	 OKLB0_p ~ dbeta(1, 1);
 	 OKLA0_p ~ dbeta(1, 1);
 	 LLCB0_p ~ dbeta(1, 1);
@@ -108,28 +108,28 @@ model {
 	 SA0A0_p ~ dbeta(1, 1);
 	 OMKB0_p ~ dbeta(1, 1);
 	 OMKA0_p ~ dbeta(1, 1);
-	 OBF_p ~ dbeta(1, 1);
-	 WAN_p ~ dbeta(1, 1);
-	 JOH_p ~ dbeta(1, 1);
-	 TNK_p ~ dbeta(1, 1);
-	 AEN_p ~ dbeta(1, 1);
+	 OBF_p <- 1; # Single array, no upstream detections
+	 WAN_p <- 0; # no detections / not in operation
+	 JOH_p <- 0; # no detections / not in operation
+	 TNK_p <- 1; # Single array, no upstream detections
+	 AEN_p <- 0; # no detections / not in operation
 	 BPCB0_p ~ dbeta(1, 1);
 	 BPCA0_p ~ dbeta(1, 1);
 	 ANTB0_p ~ dbeta(1, 1);
 	 ANTA0_p ~ dbeta(1, 1);
-	 WHS_p ~ dbeta(1, 1);
+	 WHS_p <- 1; # Single array, no upstream detections
 	 ZSLB0_p ~ dbeta(1, 1);
 	 ZSLA0_p ~ dbeta(1, 1);
-	 TON_p ~ dbeta(1, 1);
+	 TON_p <- 1; # Single array, no upstream detections
 	 NMCB0_p ~ dbeta(1, 1);
 	 NMCA0_p ~ dbeta(1, 1);
-	 OKIB0_p ~ dbeta(1, 1);
-	 OKIA0_p ~ dbeta(1, 1);
+	 OKIB0_p <- 0; # no detections / not in operation
+	 OKIA0_p <- 0; # no detections / not in operation
 	 OKCB0_p ~ dbeta(1, 1);
 	 OKCA0_p ~ dbeta(1, 1);
 	 OKVB0_p ~ dbeta(1, 1);
 	 OKVA0_p ~ dbeta(1, 1);
-	 FST_p ~ dbeta(1, 1);
+	 FST_p <- 1; # Single array, no upstream detections
 
 # Priors for transition probabilities 
 

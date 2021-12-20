@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: prep and run DABOM
 # Created: 4/1/20
-# Last Modified: 6/9/2021
+# Last Modified: 12/15/2021
 # Notes:
 
 #-----------------------------------------------------------------
@@ -22,14 +22,14 @@ load(here('analysis/data/derived_data/site_config.rda'))
 # Load required DABOM data
 #-----------------------------------------------------------------
 # set year
-yr = 2020
+yr = 2021
 
 # for(yr in 2011:2019) {
 #   cat(paste("Working on", yr, "\n\n"))
 
 # load and filter biological data
 bio_df = read_rds(here('analysis/data/derived_data',
-                       'Bio_Data_2011_2020.rds')) %>%
+                       'Bio_Data_2011_2021.rds')) %>%
   filter(year == yr)
 
 # load processed detection histories
@@ -155,7 +155,8 @@ rhat_df = rhat(my_mcmcr,
 rhat_df %>%
   ggplot(aes(x = rhat)) +
   geom_histogram(fill = 'blue',
-                 bins = 40) +
+                 # bins = 40) +
+                 binwidth = 0.001) +
   facet_wrap(~ type,
              scales = 'free')
 
@@ -202,7 +203,7 @@ post_summ(my_mod,
 
 
 
-param_chk = c('psi_LWE')
+param_chk = c('psi_RRF')
 param_chk = convg_df %>%
   filter(!converged) %>%
   pull(parameter)
