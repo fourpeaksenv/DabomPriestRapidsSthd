@@ -164,7 +164,7 @@ bio_df %<>%
   bind_rows(bio_2020)
 
 #-----------------------------------------------------------------
-# add 2020 bio data
+# add 2021 bio data
 bio_2021 = read_csv(here('analysis/data/raw_data/WDFW/CME-2020-192-PRD correct columns for Kevin final 2-10-21.csv')) %>%
   janitor::clean_names() %>%
   mutate(brood_year = "BY21") %>%

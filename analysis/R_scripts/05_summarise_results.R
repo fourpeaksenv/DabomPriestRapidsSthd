@@ -20,7 +20,7 @@ library(here)
 
 #-----------------------------------------------------------------
 # set year
-yr = 2020
+yr = 2021
 
 #-----------------------------------------------------------------
 # load configuration and site_df data
@@ -28,7 +28,7 @@ load(here('analysis/data/derived_data',
           'site_config.rda'))
 
 
-for(yr in 2011:2020) {
+# for(yr in 2011:2020) {
   cat(paste("Working on", yr, "\n\n"))
 
   # load compressed detections and biological data
