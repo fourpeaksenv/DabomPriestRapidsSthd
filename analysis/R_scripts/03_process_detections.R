@@ -131,13 +131,62 @@ save(parent_child, configuration, start_date, bio_df, prepped_ch,
 #-------------------------------------------
 # open that Excel file, and filter on the column user_keep_obs, looking for blanks. Fill in each row with TRUE or FALSE, depending on whether that observation should be kept or not. The column auto_keep_obs provides a suggestion, but the biologist's best expert judgment should be used based on detection dates, detection locations before and after, etc.
 
+load(here('analysis/data/derived_data/PITcleanr',
+          paste0('UC_Steelhead_', yr, '.rda')))
+
+wdfw_df = read_excel(here('analysis/data/derived_data/WDFW',
+                          paste0('UC_Steelhead_', yr, '.xlsx')))
+
+filter_obs = wdfw_df %>%
+  mutate(user_keep_obs = if_else(is.na(user_keep_obs),
+                                 auto_keep_obs,
+                                 user_keep_obs)) %>%
+  filter(user_keep_obs)
+
+# construct all valid paths
+all_paths = buildPaths(addParentChildNodes(parent_child,
+                                           configuration))
+
+tag_path = summarizeTagData(filter_obs,
+                            bio_df %>%
+                              group_by(tag_code) %>%
+                              slice(1) %>%
+                              ungroup()) %>%
+  select(tag_code, spawn_node) %>%
+  distinct() %>%
+  left_join(all_paths,
+            by = c('spawn_node' = 'end_loc')) %>%
+  rename(tag_path = path)
+
+error_tags = filter_obs %>%
+  left_join(tag_path) %>%
+  rowwise() %>%
+  mutate(node_in_path = str_detect(tag_path, node)) %>%
+  ungroup() %>%
+  filter(!node_in_path) %>%
+  select(tag_code) %>%
+  distinct()
+
+nrow(error_tags)
+error_tags %>%
+  left_join(wdfw_df) %>%
+  as.data.frame()
+
+prepped_ch = wdfw_df
+
+save(parent_child, configuration, start_date, bio_df, prepped_ch,
+     file = here('analysis/data/derived_data/PITcleanr',
+                 paste0('UC_Steelhead_', yr, '.rda')))
+
 
 #-----------------------------------------------------------------
 # tag summaries
 #-----------------------------------------------------------------
 # use auto_keep_obs for the moment
 tag_summ = summarizeTagData(prepped_ch %>%
-                              mutate(user_keep_obs = auto_keep_obs),
+                              mutate(user_keep_obs = if_else(is.na(user_keep_obs),
+                                                             auto_keep_obs,
+                                                             user_keep_obs)),
                             bio_df %>%
                               group_by(tag_code) %>%
                               slice(1) %>%
