@@ -16,7 +16,7 @@ library(here)
 
 #-----------------------------------------------------------------
 # set year
-yr = 2015
+yr = 2016
 
 
 # load PITcleanr prepped data
