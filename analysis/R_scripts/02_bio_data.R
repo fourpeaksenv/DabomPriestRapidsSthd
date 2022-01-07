@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: create tag lists to feed to PTAGIS query
 # Created: 4/1/2020
-# Last Modified: 11/12/2020
+# Last Modified: 1/7/2022
 # Notes:
 
 #-----------------------------------------------------------------
@@ -165,8 +165,28 @@ bio_df %<>%
 
 #-----------------------------------------------------------------
 # add 2021 bio data
-bio_2021 = read_csv(here('analysis/data/raw_data/WDFW/CME-2020-192-PRD correct columns for Kevin final 2-10-21.csv')) %>%
-  janitor::clean_names() %>%
+# pull data from XML file from PTAGIS
+library(XML)
+library(methods)
+library(xml2)
+
+# use locally downloaded copy
+xml_file = here('analysis/data/raw_data/WDFW/CME-2020-192-PRD.XML')
+# query it from PTAGIS
+xml_file = "https://api.ptagis.org/files/mrr/CME-2020-192-PRD.XML"
+
+data <- xml2::read_xml(xml_file)
+doc <- XML::xmlParse(data)
+col_nms <- XML::xmlToDataFrame(nodes = getNodeSet(doc, "//DetailProjectDefinedField")) %>%
+  as_tibble()
+df <- XML::xmlToDataFrame(nodes = getNodeSet(doc, "//MRREvent")) %>%
+  as_tibble()
+names(df)[str_detect(names(df), "PDV")] <- col_nms$Label[match(names(df)[str_detect(names(df), "PDV")], col_nms$PDVColumn)]
+
+bio_2021 <- df %>%
+  clean_names() %>%
+  mutate(across(event_date,
+                ymd_hms)) %>%
   mutate(brood_year = "BY21") %>%
   mutate(year = paste0("20", str_remove(brood_year, "^BY")),
          year = as.numeric(year)) %>%
@@ -174,6 +194,15 @@ bio_2021 = read_csv(here('analysis/data/raw_data/WDFW/CME-2020-192-PRD correct c
   mutate(record_id = seq(from = max(bio_df$record_id) + 1,
                          by = 1,
                          length.out = n())) %>%
+  # add some additional information (age) from another file
+  full_join(read_csv(here('analysis/data/raw_data/WDFW/CME-2020-192-PRD correct columns for Kevin final 2-10-21.csv')) %>%
+              janitor::clean_names() %>%
+              select(pit_tag,
+                     tag_other = second_pit_tag,
+                     final_origin,
+                     scale_age) %>%
+              distinct()) %>%
+  # mutate(scale_age = NA_character_) %>%
   select(record_id,
          brood_year,
          year,
@@ -187,8 +216,11 @@ bio_2021 = read_csv(here('analysis/data/raw_data/WDFW/CME-2020-192-PRD correct c
          ad_clip = adipose_clip,
          fin_clip = fin_clip,
          cwt_snout = cwt_s,
-         cwt_body) %>%
-  mutate(trap_date = mdy_hm(trap_date)) %>%
+         cwt_body,
+         conditional_comments,
+         srr = species_run_rear_type) %>%
+  mutate(srr_origin = str_extract(srr, "[A-Z]")) %>%
+  # mutate(trap_date = mdy_hm(trap_date)) %>%
   mutate(age = str_replace(age, '^r', 'R')) %>%
   mutate(ad_clip = if_else(!is.na(ad_clip),
                            "AD",
@@ -196,7 +228,7 @@ bio_2021 = read_csv(here('analysis/data/raw_data/WDFW/CME-2020-192-PRD correct c
   mutate(sex = recode(sex,
                       "Female" = "F",
                       "Male" = "M")) %>%
-  mutate(across(c(starts_with("CWT")),
+  mutate(across(c(starts_with("cwt")),
                 ~ if_else(!is.na(.), T, F))) %>%
   mutate(cwt = if_else(cwt_snout,
                        "SN",
@@ -209,11 +241,33 @@ bio_2021 = read_csv(here('analysis/data/raw_data/WDFW/CME-2020-192-PRD correct c
                                sum(as.numeric(x[1]),
                                    as.numeric(x[2]))
                              })) %>%
-  select(any_of(names(bio_df)))
+  # select(any_of(names(bio_df)))
+  select(any_of(names(bio_df)), everything())
+
+bio_2021 %>%
+  write_csv(file = "O:/Desktop/BY21 BioData.csv")
 
 # any duplicated tags?
 bio_2021 %>%
-  filter(tag_code %in% tag_code[duplicated(tag_code)])
+  filter(tag_code %in% tag_code[duplicated(tag_code)]) %>%
+  as.data.frame()
+
+# Origin doesn't match SRR origin
+bio_2021 %>%
+  filter(origin != srr_origin) %>%
+  pull(tag_code) %>%
+  unique() %>%
+  paste(collapse = ", ")
+
+bio_2021 %>%
+  filter(is.na(final_age)) %>%
+  tabyl(age_split, age)
+
+
+
+
+names(bio_df)[!names(bio_df) %in% names(bio_2021)]
+names(bio_2021)[!names(bio_2021) %in% names(bio_df)]
 
 #-----------------------------------------------------------------
 # add to overall list
