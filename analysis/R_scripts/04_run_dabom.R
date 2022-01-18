@@ -112,7 +112,7 @@ dabom_mod = coda.samples(jags,
                          thin = 10)
 
 
-save(dabom_mod, jags_data, filter_obs,
+save(dabom_mod, jags_data, filter_obs, bio_df,
      file = here("analysis/data/derived_data/model_fits",
                  paste0('PRA_DABOM_Steelhead_', yr,'.rda')))
 
