@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: create tag lists to feed to PTAGIS query
 # Created: 4/1/2020
-# Last Modified: 1/7/2022
+# Last Modified: 1/18/2022
 # Notes:
 
 #-----------------------------------------------------------------
@@ -202,6 +202,8 @@ bio_2021 <- df %>%
                      final_origin,
                      scale_age) %>%
               distinct()) %>%
+  mutate(across(length,
+                as.numeric)) %>%
   # mutate(scale_age = NA_character_) %>%
   select(record_id,
          brood_year,
@@ -244,8 +246,18 @@ bio_2021 <- df %>%
   # select(any_of(names(bio_df)))
   select(any_of(names(bio_df)), everything())
 
-bio_2021 %>%
-  write_csv(file = "O:/Desktop/BY21 BioData.csv")
+# fix a couple bits of information after checking with Ben Truscott
+bio_2021 %<>%
+  mutate(origin = if_else(tag_code == "3DD.003DA287CE",
+                          "H",
+                          origin))
+
+bio_2021 %<>%
+  filter(!(tag_code == "3DD.003DA2859A" & str_detect(conditional_comments, "AI")))
+
+bio_2021 %<>%
+  filter(!(tag_code == "3DD.003DA28690" & srr == "32W"))
+
 
 # any duplicated tags?
 bio_2021 %>%
@@ -272,7 +284,8 @@ names(bio_2021)[!names(bio_2021) %in% names(bio_df)]
 #-----------------------------------------------------------------
 # add to overall list
 bio_df %<>%
-  bind_rows(bio_2021)
+  bind_rows(bio_2021 %>%
+              select(any_of(names(bio_df))))
 
 
 #-----------------------------------------------------------------
