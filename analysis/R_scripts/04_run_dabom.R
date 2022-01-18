@@ -93,7 +93,7 @@ jags_params = setSavedParams(model_file = mod_path,
                              time_varying = F)
 
 
-# test running the model
+# run the model
 jags = jags.model(mod_path,
                   data = jags_data,
                   inits = init_fnc,
