@@ -711,6 +711,9 @@ load(here('analysis/data/derived_data',
                               se = sd) %>%
                        select(-median, -mode),
                      'All Escapement' = escape_summ %>%
+                       mutate(origin = recode(origin,
+                                              '1' = 'W',
+                                              '2' = 'H')) %>%
                        select(-skew, -kurtosis) %>%
                        mutate_at(vars(mean:upperCI),
                                  list(round),
