@@ -27,10 +27,10 @@ yr = 2021
 # for(yr in 2011:2019) {
 #   cat(paste("Working on", yr, "\n\n"))
 
-# load and filter biological data
-bio_df = read_rds(here('analysis/data/derived_data',
-                       'Bio_Data_2011_2021.rds')) %>%
-  filter(year == yr)
+# # load and filter biological data
+# bio_df = read_rds(here('analysis/data/derived_data',
+#                        'Bio_Data_2011_2021.rds')) %>%
+#   filter(year == yr)
 
 # load processed detection histories
 load(here('analysis/data/derived_data/PITcleanr',
