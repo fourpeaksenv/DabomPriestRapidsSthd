@@ -704,9 +704,11 @@ load(here('analysis/data/derived_data',
   # write results to an Excel file
   save_list = c(list('Population Escapement' = pop_summ %>%
                        select(-skew, -kurtosis) %>%
-                       mutate_at(vars(mean:upperCI),
-                                 list(round),
-                                 digits = 1) %>%
+                       mutate(across(mean:mode,
+                                     janitor::round_half_up)) %>%
+                       mutate(across(sd:upperCI,
+                                     round,
+                                     digits = 1)) %>%
                        rename(estimate = mean,
                               se = sd) %>%
                        select(-median, -mode),
@@ -715,9 +717,11 @@ load(here('analysis/data/derived_data',
                                               '1' = 'W',
                                               '2' = 'H')) %>%
                        select(-skew, -kurtosis) %>%
-                       mutate_at(vars(mean:upperCI),
-                                 list(round),
-                                 digits = 1) %>%
+                       mutate(across(mean:mode,
+                                     janitor::round_half_up)) %>%
+                       mutate(across(sd:upperCI,
+                                     round,
+                                     digits = 1)) %>%
                        rename(estimate = mean,
                               se = sd) %>%
                        select(-median, -mode),
@@ -737,3 +741,104 @@ load(here('analysis/data/derived_data',
                                   paste0('UC_Steelhead_', yr, '_', format(Sys.Date(), '%Y%m%d'), '.xlsx')))
 
 # }
+
+
+
+#---------------------------------------------------
+# compare estimates with some dam counts
+#---------------------------------------------------
+
+# query dam counts at Priest, Rock Island, Rocky Reach and Wells
+dam_cnts = tibble(dam = c("RockIsland",
+                          "RockyReach",
+                          "Wells",
+                          "Tumwater"),
+                  dam_code = c("RIS",
+                               "RRH",
+                               "WEL",
+                               "TUM")) %>%
+  crossing(spp = c("Steelhead",
+                   "Wild_Steelhead")) %>%
+
+  mutate(win_cnt = map2_dbl(dam_code,
+                            spp,
+                            .f = function(x, y) {
+                              STADEM::getWindowCounts(dam = x,
+                                                      spp = y,
+                                                      start_date = start_date,
+                                                      end_date = end_date) %>%
+                                summarise_at(vars(win_cnt),
+                                             list(sum),
+                                             na.rm = T) %>%
+                                pull(win_cnt)
+                            })) %>%
+  pivot_wider(names_from = spp,
+              values_from = win_cnt) %>%
+  rename(All = Steelhead,
+         W = Wild_Steelhead) %>%
+  mutate(H = All - W) %>%
+  pivot_longer(cols = c("All", "W", 'H'),
+               names_to = 'origin',
+               values_to = "win_cnt")
+
+dam_est = escape_summ %>%
+  mutate(origin = recode(origin,
+                         '1' = 'W',
+                         '2' = 'H')) %>%
+  filter(location %in% c("RIA",
+                         "RRF",
+                         "WEA",
+                         "TUM")) %>%
+  mutate(dam = recode(location,
+                      "RIA" = "RockIsland",
+                      "RRF" = "RockyReach",
+                      "WEA" = "Wells",
+                      "TUM" = "Tumwater"))
+comp_df = dam_est %>%
+  group_by(dam) %>%
+  summarize(across(c(mean:mode, ends_with("CI")),
+                   sum),
+            .groups = "drop") %>%
+  mutate(origin = "All") %>%
+  bind_rows(dam_est %>%
+              select(dam,
+                     origin,
+                     mean:mode,
+                     ends_with("CI"))) %>%
+  left_join(dam_cnts) %>%
+  rowwise() %>%
+  mutate(larger = if_else(win_cnt > mean,
+                          "Counts",
+                          "DABOM")) %>%
+  mutate(in_ci = between(win_cnt, lowerCI, upperCI)) %>%
+  ungroup() %>%
+  mutate(dam = fct_relevel(dam,
+                           "Tumwater",
+                           after = Inf)) %>%
+  arrange(dam,
+          origin)
+
+comp_df %>%
+  ggplot(aes(x = dam,
+             y = mean,
+             color = "DABOM")) +
+  geom_errorbar(aes(ymin = lowerCI,
+                    ymax = upperCI),
+                width = 0) +
+  geom_point(size = 3) +
+  geom_point(aes(y = win_cnt,
+                 color = "Dam Count"),
+             size = 3,
+             position = position_dodge(width = 1)) +
+  scale_color_manual(values = c("DABOM" = "gray20",
+                                "Dam Count" = "red"),
+                     name = "Source") +
+  facet_wrap(~ origin,
+             scales = "free_y") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45,
+                                   hjust = 1),
+        legend.position = "bottom") +
+  labs(x = "Dam",
+       y = "Estimate",
+       title = paste("Steelhead", yr))
