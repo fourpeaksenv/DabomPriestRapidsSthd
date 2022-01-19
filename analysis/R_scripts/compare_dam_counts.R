@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: recalculate estimates at Priest based on other dam counts
 # Created: 9/22/21
-# Last Modified: 9/22/21
+# Last Modified: 1/19/2022
 # Notes:
 
 #-----------------------------------------------------------------
@@ -20,10 +20,10 @@ load(here('analysis/data/derived_data',
 
 #-----------------------------------------------------------------
 # set a year
-yr = 2018
+yr = 2021
 
 start_date = paste0(yr-1, '0601')
-end_date = paste0(yr, '1231')
+end_date = paste0(yr, '0531')
 
 # query dam counts at Priest, Rock Island, Rocky Reach and Wells
 dam_cnts = list(PriestRapids = "PRD",
@@ -49,19 +49,37 @@ dam_cnts
 load(here("analysis/data/derived_data/model_fits",
           paste0('PRA_DABOM_Steelhead_', yr,'.rda')))
 
-# cdam_cntsompile all movement probabilities, and multiply them appropriately
+# compile all movement probabilities, and multiply them appropriately
 trans_df = compileTransProbs_PRA(dabom_mod,
                                  parent_child) %>%
+  mutate(origin = recode(origin,
+                         "2" = "H",
+                         "1" = "W")) %>%
   filter(param %in% c("RIA",
                       "RRF",
                       "WEA",
-                      "TUM"),
-         origin == 2) %>%
+                      "TUM")) %>%
+  # filter(origin == "H") %>%
+  group_by(chain, origin, param) %>%
+  mutate(iter = 1:n()) %>%
   mutate(dam = recode(param,
                       "RIA" = "RockIsland",
                       "RRF" = "RockyReach",
                       "WEA" = "Wells",
-                      "TUM" = "Tumwater"))
+                      "TUM" = "Tumwater")) %>%
+  left_join(bio_df %>%
+              group_by(origin) %>%
+              summarise(n_tags = n_distinct(tag_code)) %>%
+              mutate(prop = n_tags / sum(n_tags),
+                     prop_se = sqrt((prop * (1 - prop)) / sum(n_tags)))) %>%
+  # take weighted average across origin, weighted by proportion of wild/hatchery
+  group_by(dam,
+           chain,
+           iter) %>%
+  summarize(value = weighted.mean(value,
+                                  w = prop),
+            .groups = "drop")
+
 
 priest_post = trans_df %>%
   left_join(dam_cnts) %>%
