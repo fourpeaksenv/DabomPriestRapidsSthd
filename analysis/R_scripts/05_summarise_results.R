@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: summarize DABOM results
 # Created: 4/1/20
-# Last Modified: 6/9/21
+# Last Modified: 1/19/2022
 # Notes:
 
 #-----------------------------------------------------------------
@@ -100,7 +100,10 @@ load(here('analysis/data/derived_data',
 
   # compile all movement probabilities, and multiply them appropriately
   trans_df = compileTransProbs_PRA(dabom_mod,
-                                   parent_child)
+                                   parent_child) %>%
+    mutate(origin = recode(origin,
+                           "2" = "H",
+                           "1" = "W"))
 
   # # summarize transition probabilities
   # trans_summ = trans_df %>%
@@ -123,7 +126,7 @@ load(here('analysis/data/derived_data',
   end_date = paste0(yr, '0531')
 
 
-  # start with PIT-tag based reascension data
+  # # start with PIT-tag based reascension data
   org_escape = queryPITtagData(damPIT = 'PRA',
                                spp = "Steelhead",
                                start_date = start_date,
@@ -165,14 +168,74 @@ load(here('analysis/data/derived_data',
            tot_escp_se = msm::deltamethod(~ x1 * x2,
                                           mean = c(adj_win_cnt, prop),
                                           cov = diag(c(adj_win_cnt_se, prop_se)^2))) %>%
-    select(Species, SpawnYear, origin, matches('escp'))
+    select(Species, SpawnYear, origin, reasc_rate, matches('escp'))
+
+
+  # different way to calculate escapement past Priest, based on dam counts at upstream dam
+  # start with PIT-tag based reascension data
+  org_escape = queryPITtagData(damPIT = 'PRA',
+                               spp = "Steelhead",
+                               start_date = start_date,
+                               end_date = end_date) %>%
+    mutate(SpawnYear = yr) %>%
+    mutate(across(TagIdAscentCount,
+                  tidyr::replace_na,
+                  0)) %>%
+    mutate(ReAscent = ifelse(TagIdAscentCount > 1, T, F)) %>%
+    group_by(Species, SpawnYear, Date) %>%
+    summarise(tot_tags = n_distinct(TagId),
+              reascent_tags = n_distinct(TagId[ReAscent]),
+              .groups = "drop") %>%
+    group_by(Species, SpawnYear) %>%
+    summarise(across(matches('tags'),
+                     sum,
+                     na.rm = T),
+              .groups = "drop") %>%
+    mutate(reasc_rate = reascent_tags / tot_tags,
+           reasc_rate_se = sqrt(reasc_rate * (1 - reasc_rate) / tot_tags)) %>%
+    # add window counts from Rock Island
+    bind_cols(getWindowCounts(dam = 'RIS',
+                              spp = "Steelhead",
+                              start_date = start_date,
+                              end_date = end_date) %>%
+                summarise_at(vars(win_cnt),
+                             list(sum),
+                             na.rm = T) %>%
+                select(RIS_win_cnt = win_cnt)) %>%
+    bind_cols(bio_df %>%
+                group_by(origin) %>%
+                summarise(n_tags = n_distinct(tag_code),
+                          .groups = "drop") %>%
+                mutate(prop = n_tags / sum(n_tags),
+                       prop_se = sqrt((prop * (1 - prop)) / sum(n_tags)))) %>%
+    left_join(trans_df %>%
+                filter(param %in% c("RIA")) %>%
+                group_by(origin) %>%
+                summarise(mean = mean(value),
+                          median = median(value),
+                          sd = sd(value))) %>%
+    rowwise() %>%
+    mutate(PRA_win_cnt = RIS_win_cnt * prop / mean,
+           PRA_win_cnt_se = msm::deltamethod(~ x1 * x2 / x3,
+                                          mean = c(RIS_win_cnt,
+                                                   prop,
+                                                   mean),
+                                          cov = diag(c(0,
+                                                       prop_se,
+                                                       0)^2)),
+           tot_escp = PRA_win_cnt * (1 - reasc_rate),
+           tot_escp_se = msm::deltamethod(~ x1 * (1 - x2),
+                                             mean = c(PRA_win_cnt,
+                                                      reasc_rate),
+                                             cov = diag(c(PRA_win_cnt_se,
+                                                          reasc_rate_se)^2))) %>%
+    select(Species, SpawnYear, origin, reasc_rate, matches('escp'))
+
+
 
   # translate movement estimates to escapement
   escape_post = trans_df %>%
     left_join(org_escape %>%
-                mutate(origin = recode(origin,
-                                       "H" = 2,
-                                       "W" = 1)) %>%
                 group_by(origin) %>%
                 summarise(tot_esc_samp = map2(tot_escp,
                                               tot_escp_se,
@@ -258,9 +321,6 @@ load(here('analysis/data/derived_data',
                           'WEA_bb' = "WellsPool")) %>%
     mutate(param = factor(param,
                           levels = levels(brnch_df$group))) %>%
-    mutate(origin = recode(origin,
-                           '1' = 'W',
-                           '2' = 'H')) %>%
     group_by(chain, iter, origin, param) %>%
     summarize(across(escp,
                      sum),
@@ -592,9 +652,6 @@ load(here('analysis/data/derived_data',
 
   # posterior samples
   mark_post = escape_post %>%
-    mutate(origin = recode(origin,
-                           "2" = "H",
-                           "1" = "W")) %>%
     inner_join(prop_samps,
                by = c("iter", "origin",
                       "param" = "site_code")) %>%
@@ -713,9 +770,6 @@ load(here('analysis/data/derived_data',
                               se = sd) %>%
                        select(-median, -mode),
                      'All Escapement' = escape_summ %>%
-                       mutate(origin = recode(origin,
-                                              '1' = 'W',
-                                              '2' = 'H')) %>%
                        select(-skew, -kurtosis) %>%
                        mutate(across(mean:mode,
                                      janitor::round_half_up)) %>%
@@ -759,7 +813,6 @@ dam_cnts = tibble(dam = c("RockIsland",
                                "TUM")) %>%
   crossing(spp = c("Steelhead",
                    "Wild_Steelhead")) %>%
-
   mutate(win_cnt = map2_dbl(dam_code,
                             spp,
                             .f = function(x, y) {
@@ -782,9 +835,6 @@ dam_cnts = tibble(dam = c("RockIsland",
                values_to = "win_cnt")
 
 dam_est = escape_summ %>%
-  mutate(origin = recode(origin,
-                         '1' = 'W',
-                         '2' = 'H')) %>%
   filter(location %in% c("RIA",
                          "RRF",
                          "WEA",
@@ -818,6 +868,11 @@ comp_df = dam_est %>%
   arrange(dam,
           origin)
 
+# add adjustments if re-ascension rate is the same everywhere as it is at Priest
+comp_df %<>%
+  add_column(reasc_rate = unique(org_escape$reasc_rate)) %>%
+  mutate(adj_win_cnt = win_cnt * (1 - reasc_rate))
+
 comp_df %>%
   ggplot(aes(x = dam,
              y = mean,
@@ -830,8 +885,13 @@ comp_df %>%
                  color = "Dam Count"),
              size = 3,
              position = position_dodge(width = 1)) +
+  geom_point(aes(y = adj_win_cnt,
+                 color = "Adj. Dam Count"),
+             size = 3,
+             position = position_dodge(width = 1)) +
   scale_color_manual(values = c("DABOM" = "gray20",
-                                "Dam Count" = "red"),
+                                "Dam Count" = "red",
+                                "Adj. Dam Count" = "blue"),
                      name = "Source") +
   facet_wrap(~ origin,
              scales = "free_y") +
@@ -841,4 +901,5 @@ comp_df %>%
         legend.position = "bottom") +
   labs(x = "Dam",
        y = "Estimate",
-       title = paste("Steelhead", yr))
+       title = paste("Steelhead", yr),
+       subtitle = "Using Rock Island Counts")
