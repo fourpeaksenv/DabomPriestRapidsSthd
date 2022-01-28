@@ -171,12 +171,14 @@ tum_cnts = tibble(year = 2013:2021,
                               776))
 
 dam_cnts %<>%
+  mutate(year = yr) %>%
   left_join(tum_cnts %>%
               rename(tum_cnt = win_cnt)) %>%
   mutate(win_cnt = if_else(!is.na(tum_cnt),
                            tum_cnt,
                            win_cnt)) %>%
-  select(-tum_cnt)
+  select(-tum_cnt, 
+         -year)
 
 ```
 
@@ -204,9 +206,6 @@ pit_move_df_old = tibble(dam = c("PriestRapids",
                                   "RRF",
                                   "WEA",
                                   "TUM")) %>%
-  mutate(dam = fct_relevel(dam,
-                           "Tumwater",
-                           after = Inf)) %>%
   mutate(n_tags = prepped_ch %>%
            summarize(n_tags = n_distinct(tag_code)) %>%
            pull(n_tags)) %>%
@@ -219,7 +218,7 @@ pit_move_df_old = tibble(dam = c("PriestRapids",
   mutate(n_upstrm = map_int(pit_code,
                             .f = function(x) {
                               prepped_ch %>%
-                                summarize(n_path = n_distinct(tag_code[str_detect(path, x)])) %>%
+                                summarize(n_path = n_distinct(tag_code[str_detect(path, paste0(" ", x))])) %>%
                                 pull(n_path)
                             })) %>%
   mutate(prop_obs = n_obs / n_tags,
@@ -293,7 +292,10 @@ pit_move_df_old = tibble(dam = c("PriestRapids",
          tot_escp_se = msm::deltamethod(~ x1 * x2,
                                         mean = c(adj_priest_cnt, prop_org),
                                         cov = diag(c(adj_priest_cnt_se, prop_org_se)^2))) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(dam = fct_relevel(dam,
+                           "Tumwater",
+                           after = Inf))
 
 
 # pit_move_df_old %>%
@@ -328,9 +330,6 @@ pit_move_df = tibble(dam = c("PriestRapids",
                                   "RRF",
                                   "WEA",
                                   "TUM")) %>%
-  mutate(dam = fct_relevel(dam,
-                           "Tumwater",
-                           after = Inf)) %>%
   crossing(origin = c("W", "H")) %>%
   left_join(pit_obs %>%
               group_by(origin) %>%
@@ -348,9 +347,12 @@ pit_move_df = tibble(dam = c("PriestRapids",
                             .f = function(x, y) {
                               pit_obs %>%
                                 filter(origin == y) %>%
-                                summarize(n_path = n_distinct(tag_code[str_detect(path, x)])) %>%
+                                summarize(n_path = n_distinct(tag_code[str_detect(path, paste0(" ", x))])) %>%
                                 pull(n_path)
-                            })) %>%
+                            }),
+         n_upstrm = if_else(dam == "PriestRapids",
+                            n_obs,
+                            n_upstrm)) %>%
   # generate proportion hatchery/wild based on upstream tags
   group_by(dam) %>%
   mutate(prop_org = n_upstrm / sum(n_upstrm),
@@ -374,24 +376,7 @@ pit_move_df = tibble(dam = c("PriestRapids",
          trans_se = if_else(dam == "PriestRapids",
                             0,
                             trans_se)) %>%
-  mutate(win_cnt = map_dbl(dam_code,
-                           .f = function(x) {
-                             STADEM::getWindowCounts(dam = x,
-                                                     spp = "Steelhead",
-                                                     start_date = start_date,
-                                                     end_date = end_date) %>%
-                               summarise_at(vars(win_cnt),
-                                            list(sum),
-                                            na.rm = T) %>%
-                               pull(win_cnt)
-                           })) %>%
-  # adjust the Tumwater counts
-  left_join(tum_cnts %>%
-              rename(tum_cnt = win_cnt)) %>%
-  mutate(win_cnt = if_else(!is.na(tum_cnt),
-                           tum_cnt,
-                           win_cnt)) %>%
-  select(-tum_cnt) %>%
+  left_join(dam_cnts) %>%
   rowwise() %>%
   mutate(priest_cnt = win_cnt * prop_org / trans_est,
          priest_cnt_se = msm::deltamethod(~ x1 * x2 / x3,
@@ -434,13 +419,16 @@ pit_move_df = tibble(dam = c("PriestRapids",
                                                        reasc_rate),
                                               cov = diag(c(priest_cnt_se,
                                                            reasc_rate_se)^2))) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(dam = fct_relevel(dam,
+                           "Tumwater",
+                           after = Inf))
 
-# pit_move_df %>% 
+# pit_move_df %>%
 #   arrange(dam, origin) %>%
-#   select(dam, origin, 
-#          prop_org, trans_est, 
-#          win_cnt, priest_cnt, 
+#   select(dam, origin,
+#          prop_org, trans_est,
+#          win_cnt, priest_cnt,
 #          reasc_rate, tot_escp)
 ```
 
@@ -644,8 +632,7 @@ pit_move_df %>%
 
 # Discussion
 
-Using dam counts from either Rock Island or Rocky Reach would increase abundance estimates by approximately 16-18% across both origins, compared to using the original estimates at Priest Rapids dam. Conversely, using counts from Tumwater would decrease abundance estimates by 18% for both species. Meanwhile, using Wells dam counts would cause a slight decrease in abundance estimates for hatchery fish (-5%), but a large increase for natural origin fish (43%) (Table \@ref(tab:dabom-imp-tab)). This discrepancy is caused by the proportion of origin ($\pi$) at Wells being very similar to Priest, but the probability of a tagged fish moving from Priest to Wells is very different for natural and hatchery origin fish (Table \@ref(tab:param-tab)).  
+Using dam counts from either Rock Island or Rocky Reach would increase abundance estimates by approximately 16-18% across both origins, compared to using the original estimates at Priest Rapids dam. Meanwhile, using Wells dam counts would increase abundance estimates by about 7% for both origins. Conversely, using counts from Tumwater would decrease abundance estimates by 5% for both species. 
 
 These differences between different dam counts could be caused by problems with the dam counts at some places, but they could also be caused by differences in re-ascension rates between the dams. The total counts at Priest include all the fish that fell back and re-ascended the dam (being counted twice). However, with a re-ascension rate of 3% at Priest, the re-ascension rate would need to be nearly 17% at Rock Island to produce a relative difference of 17% in the Priest equivalent dam count. While that is possible, it seems unlikely to explain all of the differences in counts between Priest and Rock Island (or Rocky Reach). 
 
-It should be noted that if $\pi_j$ is calculated using only tags observed at each dam (and not all upstream detections), the proportion of hatchery/natural fish at Wells shifts to 75/25%, and the relative difference of abundance overall, compared to using Priest abundance estimates, becomes an increase of about 7% for both hatchery and natural fish. We are continuing to investigate why this discrepancy occurs only for Wells Dam (the relative differences for the other dams do not change much). 

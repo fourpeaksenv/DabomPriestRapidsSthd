@@ -144,9 +144,12 @@ for(yr in all_yrs) {
                                .f = function(x, y) {
                                  pit_obs %>%
                                    filter(origin == y) %>%
-                                   summarize(n_path = n_distinct(tag_code[str_detect(path, x)])) %>%
+                                   summarize(n_path = n_distinct(tag_code[str_detect(path, paste0(" ", x))])) %>%
                                    pull(n_path)
-                               })) %>%
+                               }),
+           n_upstrm = if_else(dam == "PriestRapids",
+                              n_obs,
+                              n_upstrm)) %>%
     # generate proportion hatchery/wild based on upstream tags
     group_by(dam) %>%
     mutate(prop_org = n_upstrm / sum(n_upstrm),
@@ -170,24 +173,7 @@ for(yr in all_yrs) {
            trans_se = if_else(dam == "PriestRapids",
                               0,
                               trans_se)) %>%
-    mutate(win_cnt = map_dbl(dam_code,
-                             .f = function(x) {
-                               STADEM::getWindowCounts(dam = x,
-                                                       spp = spp,
-                                                       start_date = start_date,
-                                                       end_date = end_date) %>%
-                                 summarise_at(vars(win_cnt),
-                                              list(sum),
-                                              na.rm = T) %>%
-                                 pull(win_cnt)
-                             })) %>%
-    # adjust the Tumwater counts
-    left_join(tum_cnts %>%
-                rename(tum_cnt = win_cnt)) %>%
-    mutate(win_cnt = if_else(!is.na(tum_cnt),
-                             tum_cnt,
-                             win_cnt)) %>%
-    select(-tum_cnt) %>%
+    left_join(dam_cnts) %>%
     rowwise() %>%
     mutate(priest_cnt = win_cnt * prop_org / trans_est,
            priest_cnt_se = msm::deltamethod(~ x1 * x2 / x3,
