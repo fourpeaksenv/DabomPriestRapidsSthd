@@ -131,6 +131,7 @@ load(here('analysis/data/derived_data',
   #                              spp = "Steelhead",
   #                              start_date = start_date,
   #                              end_date = end_date) %>%
+  #   filter(!str_detect(TagId, "000.0")) %>%
   #   mutate(SpawnYear = yr) %>%
   #   mutate(across(TagIdAscentCount,
   #                 tidyr::replace_na,
@@ -177,6 +178,7 @@ load(here('analysis/data/derived_data',
                                spp = "Steelhead",
                                start_date = start_date,
                                end_date = end_date) %>%
+    filter(!str_detect(TagId, "000.0")) %>%
     mutate(SpawnYear = yr) %>%
     mutate(across(TagIdAscentCount,
                   tidyr::replace_na,
