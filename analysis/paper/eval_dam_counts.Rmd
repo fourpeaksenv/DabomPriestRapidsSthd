@@ -1,6 +1,6 @@
 ---
 title: "Evaluating Differences in Dam Counts"
-subtitle: "And Their Effects on DABOM Estimates"
+subtitle: "And Their Effects on Abundance Estimates"
 author:
   - Kevin See:
       email: Kevin.See@dfw.wa.gov
