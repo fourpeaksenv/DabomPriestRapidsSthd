@@ -126,201 +126,201 @@ load(here('analysis/data/derived_data',
   end_date = paste0(yr, '0531')
 
 
-  # # start with PIT-tag based reascension data
-  # org_escape = queryPITtagData(damPIT = 'PRA',
-  #                              spp = "Steelhead",
-  #                              start_date = start_date,
-  #                              end_date = end_date) %>%
-  #   filter(!str_detect(TagId, "000.0")) %>%
-  #   mutate(SpawnYear = yr) %>%
-  #   mutate(across(TagIdAscentCount,
-  #                 tidyr::replace_na,
-  #                 0)) %>%
-  #   mutate(ReAscent = ifelse(TagIdAscentCount > 1, T, F)) %>%
-  #   group_by(Species, SpawnYear, Date) %>%
-  #   summarise(tot_tags = n_distinct(TagId),
-  #             reascent_tags = n_distinct(TagId[ReAscent]),
-  #             .groups = "drop") %>%
-  #   group_by(Species, SpawnYear) %>%
-  #   summarise(across(matches('tags'),
-  #                    sum,
-  #                    na.rm = T),
-  #             .groups = "drop") %>%
-  #   mutate(reasc_rate = reascent_tags / tot_tags,
-  #          reasc_rate_se = sqrt(reasc_rate * (1 - reasc_rate) / tot_tags)) %>%
-  #   # add window counts
-  #   bind_cols(getWindowCounts(dam = 'PRD',
-  #                             spp = "Steelhead",
-  #                             start_date = start_date,
-  #                             end_date = end_date) %>%
-  #               summarise_at(vars(win_cnt),
-  #                            list(sum),
-  #                            na.rm = T) %>%
-  #               select(tot_win_cnt = win_cnt)) %>%
-  #   mutate(adj_win_cnt = tot_win_cnt * (1 - reasc_rate),
-  #          adj_win_cnt_se = tot_win_cnt * reasc_rate_se) %>%
-  #   bind_cols(bio_df %>%
-  #               group_by(origin) %>%
-  #               summarise(n_tags = n_distinct(tag_code)) %>%
-  #               mutate(prop = n_tags / sum(n_tags),
-  #                      prop_se = sqrt((prop * (1 - prop)) / sum(n_tags)))) %>%
-  #   rowwise() %>%
-  #   mutate(tot_escp = adj_win_cnt * prop,
-  #          tot_escp_se = msm::deltamethod(~ x1 * x2,
-  #                                         mean = c(adj_win_cnt, prop),
-  #                                         cov = diag(c(adj_win_cnt_se, prop_se)^2))) %>%
-  #   select(Species, SpawnYear, origin, reasc_rate, matches('escp'))
-
-
-  #----------------------------------------------------------------
-  # better way to use upstream dam counts
-  # add origin to prepped capture histories
-  pit_obs = prepped_ch %>%
-    left_join(bio_df %>%
-                select(tag_code,
-                       origin)) %>%
-    select(tag_code, origin,
-           everything())
-
-  # get the total dam counts from various dams
-  dam_cnts = tibble(dam = c("PriestRapids",
-                            "RockIsland",
-                            "RockyReach",
-                            "Wells",
-                            "Tumwater"),
-                    dam_code = c("PRD",
-                                 "RIS",
-                                 "RRH",
-                                 "WEL",
-                                 "TUM"),
-                    year = yr) %>%
-    rowwise() %>%
-    mutate(win_cnt = map_dbl(dam_code,
-                              .f = function(x, y) {
-                                STADEM::getWindowCounts(dam = x,
-                                                        spp = "Steelhead",
-                                                        start_date = start_date,
-                                                        end_date = end_date) %>%
-                                  summarise_at(vars(win_cnt),
-                                               list(sum),
-                                               na.rm = T) %>%
-                                  pull(win_cnt)
-                              })) %>%
-    ungroup() %>%
-    select(year, everything())
-
-  # compile and calculate Priest equivalents
-  pit_move_df = tibble(dam = c("PriestRapids",
-                               "RockIsland",
-                               "RockyReach",
-                               "Wells"),
-                       dam_code = c("PRD",
-                                    "RIS",
-                                    "RRH",
-                                    "WEL"),
-                       pit_code = c("PRA",
-                                    "RIA",
-                                    "RRF",
-                                    "WEA")) %>%
-    add_column(year = yr,
-               .before = 0) %>%
-    crossing(origin = c("W", "H")) %>%
-    left_join(pit_obs %>%
-                group_by(origin) %>%
-                summarize(n_tags = n_distinct(tag_code))) %>%
-    mutate(n_obs = map2_int(pit_code,
-                            origin,
-                            .f = function(x, y) {
-                              pit_obs %>%
-                                filter(origin == y) %>%
-                                summarize(n_obs = n_distinct(tag_code[node == x])) %>%
-                                pull(n_obs)
-                            })) %>%
-    mutate(n_upstrm = map2_int(pit_code,
-                               origin,
-                               .f = function(x, y) {
-                                 pit_obs %>%
-                                   filter(origin == y) %>%
-                                   summarize(n_path = n_distinct(tag_code[str_detect(path, paste0(" ", x))])) %>%
-                                   pull(n_path)
-                               }),
-           n_upstrm = if_else(dam == "PriestRapids",
-                              n_obs,
-                              n_upstrm)) %>%
-    # generate proportion hatchery/wild based on upstream tags
-    group_by(dam) %>%
-    mutate(prop_org = n_upstrm / sum(n_upstrm),
-           prop_org_se = sqrt((prop_org * (1 - prop_org)) / sum(n_upstrm))) %>%
-    # generate proportion hatchery/wild based on tags detected at dam
-    # mutate(prop_org = n_obs / sum(n_obs),
-    #        prop_org_se = sqrt((prop_org * (1 - prop_org)) / sum(n_obs))) %>%
-    ungroup() %>%
-    left_join(detect_summ %>%
-                select(node, mean, sd),
-              by = c("pit_code" = "node")) %>%
-    mutate(est_tags = n_obs / mean,
-           est_tags_se = n_obs * sd / mean^2,
-           trans_est = est_tags / n_tags,
-           trans_se = est_tags_se / n_tags) %>%
-    mutate(trans_est = if_else(dam == "PriestRapids",
-                               1,
-                               trans_est),
-           trans_se = if_else(dam == "PriestRapids",
-                              0,
-                              trans_se)) %>%
-    left_join(dam_cnts) %>%
-    rowwise() %>%
-    mutate(priest_cnt = win_cnt * prop_org / trans_est,
-           priest_cnt_se = msm::deltamethod(~ x1 * x2 / x3,
-                                            mean = c(win_cnt,
-                                                     prop_org,
-                                                     trans_est),
-                                            cov = diag(c(0,
-                                                         prop_org_se,
-                                                         trans_se)^2))) %>%
-    ungroup() %>%
-    # add re-ascension rate at Priest
-    left_join(queryPITtagData(damPIT = 'PRA',
+  # start with PIT-tag based reascension data
+  org_escape = queryPITtagData(damPIT = 'PRA',
+                               spp = "Steelhead",
+                               start_date = start_date,
+                               end_date = end_date) %>%
+    filter(!str_detect(TagId, "000.0")) %>%
+    mutate(SpawnYear = yr) %>%
+    mutate(across(TagIdAscentCount,
+                  tidyr::replace_na,
+                  0)) %>%
+    mutate(ReAscent = ifelse(TagIdAscentCount > 1, T, F)) %>%
+    group_by(Species, SpawnYear, Date) %>%
+    summarise(tot_tags = n_distinct(TagId),
+              reascent_tags = n_distinct(TagId[ReAscent]),
+              .groups = "drop") %>%
+    group_by(Species, SpawnYear) %>%
+    summarise(across(matches('tags'),
+                     sum,
+                     na.rm = T),
+              .groups = "drop") %>%
+    mutate(reasc_rate = reascent_tags / tot_tags,
+           reasc_rate_se = sqrt(reasc_rate * (1 - reasc_rate) / tot_tags)) %>%
+    # add window counts
+    bind_cols(getWindowCounts(dam = 'PRD',
                               spp = "Steelhead",
                               start_date = start_date,
                               end_date = end_date) %>%
-                filter(!str_detect(TagId, "000.0")) %>%
-                mutate(SpawnYear = yr) %>%
-                mutate(across(TagIdAscentCount,
-                              tidyr::replace_na,
-                              0)) %>%
-                mutate(ReAscent = ifelse(TagIdAscentCount > 1, T, F)) %>%
-                mutate(origin = fct_recode(RearType,
-                                           "W" = "U")) %>%
-                group_by(Species, SpawnYear, Date, origin) %>%
-                summarise(tot_tags = n_distinct(TagId),
-                          reascent_tags = n_distinct(TagId[ReAscent]),
-                          .groups = "drop") %>%
-                group_by(Species, SpawnYear, origin) %>%
-                summarise(across(matches('tags'),
-                                 sum,
-                                 na.rm = T),
-                          .groups = "drop") %>%
-                mutate(reasc_rate = reascent_tags / tot_tags,
-                       reasc_rate_se = sqrt(reasc_rate * (1 - reasc_rate) / tot_tags)) %>%
-                select(origin, starts_with("reasc_rate"))) %>%
+                summarise_at(vars(win_cnt),
+                             list(sum),
+                             na.rm = T) %>%
+                select(tot_win_cnt = win_cnt)) %>%
+    mutate(adj_win_cnt = tot_win_cnt * (1 - reasc_rate),
+           adj_win_cnt_se = tot_win_cnt * reasc_rate_se) %>%
+    bind_cols(bio_df %>%
+                group_by(origin) %>%
+                summarise(n_tags = n_distinct(tag_code)) %>%
+                mutate(prop = n_tags / sum(n_tags),
+                       prop_se = sqrt((prop * (1 - prop)) / sum(n_tags)))) %>%
     rowwise() %>%
-    mutate(tot_escp = priest_cnt * (1 - reasc_rate),
-           tot_escp_se = msm::deltamethod(~ x1 * (1 - x2),
-                                          mean = c(priest_cnt,
-                                                   reasc_rate),
-                                          cov = diag(c(priest_cnt_se,
-                                                       reasc_rate_se)^2))) %>%
-    ungroup()
+    mutate(tot_escp = adj_win_cnt * prop,
+           tot_escp_se = msm::deltamethod(~ x1 * x2,
+                                          mean = c(adj_win_cnt, prop),
+                                          cov = diag(c(adj_win_cnt_se, prop_se)^2))) %>%
+    select(Species, SpawnYear, origin, reasc_rate, matches('escp'))
 
-  org_escape <- pit_move_df %>%
-    filter(dam == "PriestRapids") %>%
-    # filter(dam == "RockIsland") %>%
-    mutate(Species = "Steelhead") %>%
-    select(Species, SpawnYear = year,
-           origin,
-           starts_with("priest_cnt"),
-           reasc_rate, matches('escp'))
+
+  # #----------------------------------------------------------------
+  # # better way to use upstream dam counts
+  # # add origin to prepped capture histories
+  # pit_obs = prepped_ch %>%
+  #   left_join(bio_df %>%
+  #               select(tag_code,
+  #                      origin)) %>%
+  #   select(tag_code, origin,
+  #          everything())
+  #
+  # # get the total dam counts from various dams
+  # dam_cnts = tibble(dam = c("PriestRapids",
+  #                           "RockIsland",
+  #                           "RockyReach",
+  #                           "Wells",
+  #                           "Tumwater"),
+  #                   dam_code = c("PRD",
+  #                                "RIS",
+  #                                "RRH",
+  #                                "WEL",
+  #                                "TUM"),
+  #                   year = yr) %>%
+  #   rowwise() %>%
+  #   mutate(win_cnt = map_dbl(dam_code,
+  #                             .f = function(x, y) {
+  #                               STADEM::getWindowCounts(dam = x,
+  #                                                       spp = "Steelhead",
+  #                                                       start_date = start_date,
+  #                                                       end_date = end_date) %>%
+  #                                 summarise_at(vars(win_cnt),
+  #                                              list(sum),
+  #                                              na.rm = T) %>%
+  #                                 pull(win_cnt)
+  #                             })) %>%
+  #   ungroup() %>%
+  #   select(year, everything())
+  #
+  # # compile and calculate Priest equivalents
+  # pit_move_df = tibble(dam = c("PriestRapids",
+  #                              "RockIsland",
+  #                              "RockyReach",
+  #                              "Wells"),
+  #                      dam_code = c("PRD",
+  #                                   "RIS",
+  #                                   "RRH",
+  #                                   "WEL"),
+  #                      pit_code = c("PRA",
+  #                                   "RIA",
+  #                                   "RRF",
+  #                                   "WEA")) %>%
+  #   add_column(year = yr,
+  #              .before = 0) %>%
+  #   crossing(origin = c("W", "H")) %>%
+  #   left_join(pit_obs %>%
+  #               group_by(origin) %>%
+  #               summarize(n_tags = n_distinct(tag_code))) %>%
+  #   mutate(n_obs = map2_int(pit_code,
+  #                           origin,
+  #                           .f = function(x, y) {
+  #                             pit_obs %>%
+  #                               filter(origin == y) %>%
+  #                               summarize(n_obs = n_distinct(tag_code[node == x])) %>%
+  #                               pull(n_obs)
+  #                           })) %>%
+  #   mutate(n_upstrm = map2_int(pit_code,
+  #                              origin,
+  #                              .f = function(x, y) {
+  #                                pit_obs %>%
+  #                                  filter(origin == y) %>%
+  #                                  summarize(n_path = n_distinct(tag_code[str_detect(path, paste0(" ", x))])) %>%
+  #                                  pull(n_path)
+  #                              }),
+  #          n_upstrm = if_else(dam == "PriestRapids",
+  #                             n_obs,
+  #                             n_upstrm)) %>%
+  #   # generate proportion hatchery/wild based on upstream tags
+  #   group_by(dam) %>%
+  #   mutate(prop_org = n_upstrm / sum(n_upstrm),
+  #          prop_org_se = sqrt((prop_org * (1 - prop_org)) / sum(n_upstrm))) %>%
+  #   # generate proportion hatchery/wild based on tags detected at dam
+  #   # mutate(prop_org = n_obs / sum(n_obs),
+  #   #        prop_org_se = sqrt((prop_org * (1 - prop_org)) / sum(n_obs))) %>%
+  #   ungroup() %>%
+  #   left_join(detect_summ %>%
+  #               select(node, mean, sd),
+  #             by = c("pit_code" = "node")) %>%
+  #   mutate(est_tags = n_obs / mean,
+  #          est_tags_se = n_obs * sd / mean^2,
+  #          trans_est = est_tags / n_tags,
+  #          trans_se = est_tags_se / n_tags) %>%
+  #   mutate(trans_est = if_else(dam == "PriestRapids",
+  #                              1,
+  #                              trans_est),
+  #          trans_se = if_else(dam == "PriestRapids",
+  #                             0,
+  #                             trans_se)) %>%
+  #   left_join(dam_cnts) %>%
+  #   rowwise() %>%
+  #   mutate(priest_cnt = win_cnt * prop_org / trans_est,
+  #          priest_cnt_se = msm::deltamethod(~ x1 * x2 / x3,
+  #                                           mean = c(win_cnt,
+  #                                                    prop_org,
+  #                                                    trans_est),
+  #                                           cov = diag(c(0,
+  #                                                        prop_org_se,
+  #                                                        trans_se)^2))) %>%
+  #   ungroup() %>%
+  #   # add re-ascension rate at Priest
+  #   left_join(queryPITtagData(damPIT = 'PRA',
+  #                             spp = "Steelhead",
+  #                             start_date = start_date,
+  #                             end_date = end_date) %>%
+  #               filter(!str_detect(TagId, "000.0")) %>%
+  #               mutate(SpawnYear = yr) %>%
+  #               mutate(across(TagIdAscentCount,
+  #                             tidyr::replace_na,
+  #                             0)) %>%
+  #               mutate(ReAscent = ifelse(TagIdAscentCount > 1, T, F)) %>%
+  #               mutate(origin = fct_recode(RearType,
+  #                                          "W" = "U")) %>%
+  #               group_by(Species, SpawnYear, Date, origin) %>%
+  #               summarise(tot_tags = n_distinct(TagId),
+  #                         reascent_tags = n_distinct(TagId[ReAscent]),
+  #                         .groups = "drop") %>%
+  #               group_by(Species, SpawnYear, origin) %>%
+  #               summarise(across(matches('tags'),
+  #                                sum,
+  #                                na.rm = T),
+  #                         .groups = "drop") %>%
+  #               mutate(reasc_rate = reascent_tags / tot_tags,
+  #                      reasc_rate_se = sqrt(reasc_rate * (1 - reasc_rate) / tot_tags)) %>%
+  #               select(origin, starts_with("reasc_rate"))) %>%
+  #   rowwise() %>%
+  #   mutate(tot_escp = priest_cnt * (1 - reasc_rate),
+  #          tot_escp_se = msm::deltamethod(~ x1 * (1 - x2),
+  #                                         mean = c(priest_cnt,
+  #                                                  reasc_rate),
+  #                                         cov = diag(c(priest_cnt_se,
+  #                                                      reasc_rate_se)^2))) %>%
+  #   ungroup()
+  #
+  # org_escape <- pit_move_df %>%
+  #   filter(dam == "PriestRapids") %>%
+  #   # filter(dam == "RockIsland") %>%
+  #   mutate(Species = "Steelhead") %>%
+  #   select(Species, SpawnYear = year,
+  #          origin,
+  #          starts_with("priest_cnt"),
+  #          reasc_rate, matches('escp'))
 
 
   # translate movement estimates to escapement
