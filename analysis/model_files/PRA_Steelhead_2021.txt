@@ -33,8 +33,8 @@ model {
 	 CHMA0_p ~ dbeta(1, 1);
 	 ICLB0_p ~ dbeta(1, 1);
 	 ICLA0_p ~ dbeta(1, 1);
-	 LNFB0_p ~ dbeta(1, 1);
-	 LNFA0_p ~ dbeta(1, 1);
+	 LNFB0_p <- 0; # no detections / not in operation
+	 LNFA0_p <- 0; # no detections / not in operation
 	 ICMB0_p ~ dbeta(1, 1);
 	 ICMA0_p ~ dbeta(1, 1);
 	 ICUB0_p <- 0; # no detections / not in operation
@@ -52,7 +52,7 @@ model {
 	 NAUB0_p ~ dbeta(1, 1);
 	 NAUA0_p ~ dbeta(1, 1);
 	 WTLB0_p <- 0; # no detections / not in operation
-	 WTLA0_p <- 0; # no detections / not in operation
+	 WTLA0_p <- 1; # Single array, no upstream detections
 	 LWNB0_p <- 0; # no detections / not in operation
 	 LWNA0_p <- 0; # no detections / not in operation
 	 RRF_p ~ dbeta(1, 1);
@@ -253,10 +253,10 @@ model {
 	 omega_TUM[3, 1:n_branch_TUM] <- psi_TUM[2,]; 
 	 omega_TUM[3, (n_branch_TUM + 1)] <- 0; 
 
-	 phi_MSH[1] ~ dbeta(1, 1); 
-	 phi_MSH[2] ~ dbeta(1, 1); 
+	 phi_MSH[1] <- 0 # no upstream detections
+	 phi_MSH[2] <- 0 # no upstream detections
 
-	 phi_MRW[1] ~ dbeta(1, 1); 
+	 phi_MRW[1] <- 0 # no upstream detections
 	 phi_MRW[2] ~ dbeta(1, 1); 
 
 	 psi_ENL[1, 1:n_branch_ENL] ~ ddirch(ENL_dirch_vec[1,]); 
@@ -274,14 +274,14 @@ model {
 	 phi_TWR[1] ~ dbeta(1, 1); 
 	 phi_TWR[2] ~ dbeta(1, 1); 
 
-	 phi_ENA[1] ~ dbeta(1, 1); 
-	 phi_ENA[2] ~ dbeta(1, 1); 
+	 phi_ENA[1] <- 0 # no upstream detections
+	 phi_ENA[2] <- 0 # no upstream detections
 
 	 phi_CRW[1] ~ dbeta(1, 1); 
 	 phi_CRW[2] ~ dbeta(1, 1); 
 
-	 phi_ICM[1] ~ dbeta(1, 1); 
-	 phi_ICM[2] ~ dbeta(1, 1); 
+	 phi_ICM[1] <- 0 # no upstream detections
+	 phi_ICM[2] <- 0 # no upstream detections
 
 	 psi_UWE[1, 1:n_branch_UWE] ~ ddirch(UWE_dirch_vec[1,]); 
 	 psi_UWE[2, 1:n_branch_UWE] ~ ddirch(UWE_dirch_vec[2,]); 
@@ -295,19 +295,19 @@ model {
 	 omega_UWE[3, 1:n_branch_UWE] <- psi_UWE[2,]; 
 	 omega_UWE[3, (n_branch_UWE + 1)] <- 0; 
 
-	 phi_OKC[1] ~ dbeta(1, 1); 
+	 phi_OKC[1] <- 0 # no upstream detections
 	 phi_OKC[2] ~ dbeta(1, 1); 
 
 	 phi_CHL[1] ~ dbeta(1, 1); 
 	 phi_CHL[2] ~ dbeta(1, 1); 
 
 	 phi_PES[1] ~ dbeta(1, 1); 
-	 phi_PES[2] ~ dbeta(1, 1); 
+	 phi_PES[2] <- 0 # no upstream detections
 
 	 phi_SA1[1] ~ dbeta(1, 1); 
 	 phi_SA1[2] ~ dbeta(1, 1); 
 
-	 phi_OMK[1] ~ dbeta(1, 1); 
+	 phi_OMK[1] <- 0 # no upstream detections
 	 phi_OMK[2] ~ dbeta(1, 1); 
 
 	 phi_NAL[1] ~ dbeta(1, 1); 
