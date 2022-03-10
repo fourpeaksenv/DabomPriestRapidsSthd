@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: recalculate estimates at Priest based on other dam counts
 # Created: 1/25/2022
-# Last Modified: 1/25/2022
+# Last Modified: 3/8/2022
 # Notes:
 
 #-----------------------------------------------------------------
@@ -36,20 +36,20 @@ dam_cnts = tibble(dam = c("PriestRapids",
                                "RRH",
                                "WEL",
                                "TUM")) %>%
-  crossing(year = all_yrs) %>%
+  crossing(year = c(all_yrs, 2022)) %>%
   rowwise() %>%
   mutate(win_cnt = map2_dbl(dam_code,
                             year,
-                           .f = function(x, y) {
-                             STADEM::getWindowCounts(dam = x,
-                                                     spp = spp,
-                                                     start_date = paste0(y-1, '0601'),
-                                                     end_date = paste0(y, '0531')) %>%
-                               summarise_at(vars(win_cnt),
-                                            list(sum),
-                                            na.rm = T) %>%
-                               pull(win_cnt)
-                           })) %>%
+                            .f = function(x, y) {
+                              STADEM::getWindowCounts(dam = x,
+                                                      spp = spp,
+                                                      start_date = paste0(y-1, '0601'),
+                                                      end_date = paste0(y, '0531')) %>%
+                                summarise_at(vars(win_cnt),
+                                             list(sum),
+                                             na.rm = T) %>%
+                                pull(win_cnt)
+                            })) %>%
   ungroup() %>%
   select(year, everything())
 
@@ -75,18 +75,103 @@ dam_cnts %<>%
                            win_cnt)) %>%
   select(-tum_cnt)
 
+
+dam_cnts %>%
+  filter(dam_code != "TUM") %>%
+  group_by(year) %>%
+  mutate(perc_prd = win_cnt / win_cnt[dam_code == "PRD"]) %>%
+  ungroup() %>%
+  ggplot(aes(x = year,
+             y = perc_prd,
+             color = dam_code)) +
+  geom_point(size = 3) +
+  geom_line() +
+  scale_color_brewer(palette = "Set1",
+                     name = "Dam") +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  labs(x = "Year",
+       y = "Percent of Priest Rapids Counts")
+
+dam_cnts %>%
+  filter(dam_code != "TUM") %>%
+  group_by(year) %>%
+  mutate(perc_ria = win_cnt / win_cnt[dam_code == "RIS"]) %>%
+  ungroup() %>%
+  ggplot(aes(x = year,
+             y = perc_ria,
+             color = dam_code)) +
+  geom_point(size = 3) +
+  geom_line() +
+  scale_color_brewer(palette = "Set1",
+                     name = "Dam") +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  labs(x = "Year",
+       y = "Percent of Rock Island Counts")
+
+#-----------------------------------------------------------------
+# get re-ascension rates for some dams
+reasc_rates <- crossing(year = all_yrs,
+                        pit_code = c("PRA",
+                                     "RIA",
+                                     "RRF")) %>%
+  mutate(reasc_df = map2(pit_code, year,
+                         .f = function(x, y) {
+
+                           res <- try(queryPITtagData(damPIT = x,
+                                                      spp = "Steelhead",
+                                                      start_date = paste0(y-1, '0601'),
+                                                      end_date = paste0(y, '0531')) %>%
+                                        filter(!str_detect(TagId, "000.0")) %>%
+                                        mutate(across(TagIdAscentCount,
+                                                      tidyr::replace_na,
+                                                      0)) %>%
+                                        mutate(ReAscent = ifelse(TagIdAscentCount > 1, T, F)) %>%
+                                        mutate(origin = fct_recode(RearType,
+                                                                   "W" = "U")) %>%
+                                        group_by(Species, Date, origin) %>%
+                                        summarise(tot_tags = n_distinct(TagId),
+                                                  reascent_tags = n_distinct(TagId[ReAscent]),
+                                                  .groups = "drop") %>%
+                                        group_by(Species, origin) %>%
+                                        summarise(across(matches('tags'),
+                                                         sum,
+                                                         na.rm = T),
+                                                  .groups = "drop") %>%
+                                        mutate(reasc_rate = reascent_tags / tot_tags,
+                                               reasc_rate_se = sqrt(reasc_rate * (1 - reasc_rate) / tot_tags)) %>%
+                                        select(origin, starts_with("reasc_rate")))
+                           return(res)
+                         })) %>%
+  mutate(class = map_chr(reasc_df,
+                         .f = function(x) class(x)[1])) %>%
+  filter(class == "tbl_df") %>%
+  select(-class) %>%
+  unnest(reasc_df)
+
+d_w = 0.5
+reasc_rates %>%
+  ggplot(aes(x = as.factor(year),
+             y = reasc_rate,
+             color = pit_code)) +
+  geom_errorbar(aes(ymin = qnorm(0.025, reasc_rate, reasc_rate_se),
+                    ymax = qnorm(0.975, reasc_rate, reasc_rate_se)),
+                width = 0,
+                position = position_dodge(d_w)) +
+  geom_point(size = 3,
+             position = position_dodge(d_w)) +
+  facet_wrap(~ origin) +
+  scale_color_brewer(palette = "Set1",
+                     name = "Dam") +
+  labs(x = "Year",
+       y = "Reascension Rate")
+
 #-----------------------------------------------------------------
 # loop over all years
 for(yr in all_yrs) {
 
   # set up a tibble to capture results
   if(yr == min(all_yrs)) {
-    pit_move_all = NULL
-  }
-
-  if(spp == "Steelhead") {
-    start_date = paste0(yr-1, '0601')
-    end_date = paste0(yr, '0531')
+    pit_move_tmp = NULL
   }
 
   # load compressed detections and biological data
@@ -172,72 +257,129 @@ for(yr in all_yrs) {
                                trans_est),
            trans_se = if_else(dam == "PriestRapids",
                               0,
-                              trans_se)) %>%
-    left_join(dam_cnts) %>%
-    rowwise() %>%
-    mutate(priest_cnt = win_cnt * prop_org / trans_est,
-           priest_cnt_se = msm::deltamethod(~ x1 * x2 / x3,
-                                            mean = c(win_cnt,
-                                                     prop_org,
-                                                     trans_est),
-                                            cov = diag(c(0,
-                                                         prop_org_se,
-                                                         trans_se)^2))) %>%
-    ungroup() %>%
-    # add re-ascenstion rate at Priest
-    left_join(queryPITtagData(damPIT = 'PRA',
-                              spp = "Steelhead",
-                              start_date = start_date,
-                              end_date = end_date) %>%
-                filter(!str_detect(TagId, "000.0")) %>%
-                mutate(SpawnYear = yr) %>%
-                mutate(across(TagIdAscentCount,
-                              tidyr::replace_na,
-                              0)) %>%
-                mutate(ReAscent = ifelse(TagIdAscentCount > 1, T, F)) %>%
-                mutate(origin = fct_recode(RearType,
-                                           "W" = "U")) %>%
-                group_by(Species, SpawnYear, Date, origin) %>%
-                summarise(tot_tags = n_distinct(TagId),
-                          reascent_tags = n_distinct(TagId[ReAscent]),
-                          .groups = "drop") %>%
-                group_by(Species, SpawnYear, origin) %>%
-                summarise(across(matches('tags'),
-                                 sum,
-                                 na.rm = T),
-                          .groups = "drop") %>%
-                mutate(reasc_rate = reascent_tags / tot_tags,
-                       reasc_rate_se = sqrt(reasc_rate * (1 - reasc_rate) / tot_tags)) %>%
-                select(origin, starts_with("reasc_rate"))) %>%
-    rowwise() %>%
-    mutate(tot_escp = priest_cnt * (1 - reasc_rate),
-           tot_escp_se = msm::deltamethod(~ x1 * (1 - x2),
-                                          mean = c(priest_cnt,
-                                                   reasc_rate),
-                                          cov = diag(c(priest_cnt_se,
-                                                       reasc_rate_se)^2))) %>%
-    ungroup() %>%
-    mutate(dam = fct_relevel(dam,
-                             "Tumwater",
-                             after = Inf))
+                              trans_se))
 
-  if(is.null(pit_move_all)) {
-    pit_move_all = pit_move_df
+  if(is.null(pit_move_tmp)) {
+    pit_move_tmp = pit_move_df
   } else {
-    pit_move_all <- pit_move_all %>%
+    pit_move_tmp <- pit_move_tmp %>%
       bind_rows(pit_move_df)
   }
 
   rm(detect_summ,
      pit_obs,
      pit_move_df,
-     start_date, end_date)
+     dabom_mod,
+     filter_obs)
 }
 
-pit_move_all %<>%
-    mutate(priest_cnt_se = if_else(dam == "PriestRapids",
-                                   NA_real_,
-                                   priest_cnt_se))
+pit_move_all <- pit_move_tmp %>%
+  left_join(dam_cnts) %>%
+  left_join(reasc_rates) %>%
+  mutate(reasc_avail = if_else(!is.na(reasc_rate),
+                               T, F)) %>%
+  left_join(reasc_rates %>%
+              group_by(pit_code, origin) %>%
+              summarize(across(starts_with("reasc"),
+                               list(mean = mean),
+                               .names = "{.col}_{.fn}"),
+                        .groups = "drop")) %>%
+  rowwise() %>%
+  mutate(across(reasc_rate,
+                ~ if_else(reasc_avail,
+                          .,
+                          reasc_rate_mean)),
+         across(reasc_rate_se,
+                ~ if_else(reasc_avail,
+                          .,
+                          reasc_rate_se_mean))) %>%
+  select(-reasc_rate_mean,
+         -reasc_rate_se_mean) %>%
+  group_by(year, origin) %>%
+  mutate(reasc_rate_pra = reasc_rate[pit_code == "PRA"],
+         reasc_se_pra = reasc_rate_se[pit_code == "PRA"]) %>%
+  ungroup() %>%
+  mutate(reasc_rate = if_else(!reasc_avail,
+                              reasc_rate_pra,
+                              reasc_rate),
+         reasc_rate_se = if_else(!reasc_avail,
+                                 reasc_se_pra,
+                                 reasc_rate_se)) %>%
+  rowwise() %>%
+  mutate(tot_escp = win_cnt * prop_org * (1 - reasc_rate) / trans_est,
+         tot_escp_se = msm::deltamethod(~ x1 * x2 * (1 - x3) / x4,
+                                        mean = c(win_cnt,
+                                                 prop_org,
+                                                 reasc_rate,
+                                                 trans_est),
+                                        cov = diag(c(0,
+                                                     prop_org_se,
+                                                     reasc_rate_se,
+                                                     trans_se)^2))) %>%
+  mutate(tot_escp_cv = tot_escp_se / tot_escp) %>%
+  mutate(priest_cnt = tot_escp * (1 + reasc_rate_pra),
+         priest_cnt_se = msm::deltamethod(~ x1 * (1 + x2),
+                                          mean = c(tot_escp,
+                                                   reasc_rate_pra),
+                                          cov = diag(c(tot_escp_se,
+                                                       reasc_se_pra)^2))) %>%
+  ungroup() %>%
+  mutate(dam = fct_relevel(dam,
+                           "Tumwater",
+                           after = Inf))
+
+# # drop Tumwater
+# pit_move_all %<>%
+#   filter(dam_code != "TUM")
+
+#-----------------------------------------------------------------
+# calculate what total Priest counts "should have been"
+pit_move_all %>%
+  group_by(year, dam, pit_code, reasc_avail) %>%
+  summarize(priest_cnt = sum(priest_cnt),
+            priest_cnt_se = sqrt(sum(priest_cnt_se^2))) %>%
+  left_join(pit_move_all %>%
+              filter(pit_code == "PRA") %>%
+              select(year, win_cnt) %>%
+              distinct()) %>%
+  mutate(across(priest_cnt,
+                ~ if_else(pit_code == "PRA",
+                          win_cnt,
+                          priest_cnt))) %>%
+  mutate(across(priest_cnt_se,
+                ~ if_else(pit_code == "PRA",
+                          NA_real_,
+                          .))) %>%
+  rowwise() %>%
+  mutate(rel_diff = (priest_cnt - win_cnt) / win_cnt,
+         rel_diff_se = msm::deltamethod(~ (x1 - x2) / x2,
+                                        c(priest_cnt,
+                                          win_cnt),
+                                        diag(c(priest_cnt_se, 0)^2)),
+         across(starts_with("rel_diff"),
+                ~ . * 100)) %>%
+  ungroup() %>%
+  filter(pit_code != "TUM") %>%
+  ggplot(aes(x = as.factor(year),
+             y = rel_diff,
+             color = dam,
+             shape = reasc_avail)) +
+  geom_errorbar(aes(ymin = qnorm(0.025, rel_diff, rel_diff_se),
+                    ymax = qnorm(0.975, rel_diff, rel_diff_se)),
+                width = 0,
+                position = position_dodge(d_w)) +
+  geom_point(size = 3,
+             position = position_dodge(d_w)) +
+  scale_color_brewer(palette = "Set1",
+                     name = "Dam") +
+  scale_shape_manual(values = c("TRUE" = 19,
+                                "FALSE" = 1),
+                     name = "Reascension Query\nAvailable") +
+  labs(x = "Spawn Year",
+       y = "Relative Difference (%)\nvs. Priest Counts") +
+  theme(axis.text.x = element_text(angle = 45,
+                                   hjust = 1),
+        legend.position = "bottom")
 
 
 #-----------------------------------------------------------------
@@ -269,7 +411,8 @@ dens_comp_p = pit_move_all %>%
                     name = "Dam Count\nSource") +
   geom_density(alpha = 0.4) +
   geom_vline(data = dam_cnts %>%
-               filter(dam == "PriestRapids"),
+               filter(dam == "PriestRapids",
+                      year %in% unique(pit_move_all$year)),
              aes(xintercept = win_cnt),
              linetype = 2,
              lwd = 1) +
@@ -336,11 +479,11 @@ rel_xy_p = pit_move_all %>%
   geom_hline(yintercept = 0,
              linetype = 2) +
   facet_wrap(~ year,
-             # scales = "fixed") +
-             scales = "free_y") +
+             scales = "fixed") +
+  # scales = "free_y") +
   scale_color_brewer(palette = "Set1",
                      name = "Dam Count Source") +
-  theme(axis.text.x = element_text(angle = 45,
+  theme(axis.text.x = element_text(angle = 80,
                                    hjust = 1),
         legend.position = "none") +
   scale_y_continuous(labels = function(x) x * 100) +

@@ -1,0 +1,693 @@
+---
+title: "Evaluating Differences in Dam Counts"
+subtitle: "And Their Effects on Abundance Estimates"
+author:
+  - Kevin See:
+      email: Kevin.See@dfw.wa.gov
+      institute: [wdfw]
+      correspondence: true
+  - Ben Truscott:
+      email: Ben.Truscott@dfw.wa.gov
+      institute: [wdfw]
+      correspondence: false
+institute:
+  - wdfw: Washington Department of Fish & Wildlife
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+    wdfwTemplates::wdfw_html_format2:
+      fig_caption: yes
+      fig_height: 4
+      fig_width: 6
+      toc: yes
+      toc_depth: 3
+      toc_float:
+        collapsed: yes
+        smooth_scroll: yes
+      pandoc_args:
+      - --lua-filter=../templates/scholarly-metadata.lua
+      - --lua-filter=../templates/author-info-blocks.lua
+      - --lua-filter=../templates/pagebreak.lua
+    bookdown::pdf_document2:
+      fig_caption: yes
+      fig_height: 4
+      fig_width: 6
+      toc: yes
+      includes:
+        in_header: ../templates/header_WDFW.tex
+      pandoc_args:
+      - --lua-filter=../templates/scholarly-metadata.lua
+      - --lua-filter=../templates/author-info-blocks2.lua
+      - --lua-filter=../templates/pagebreak.lua
+    bookdown::word_document2:
+      fig_caption: yes
+      fig_height: 4
+      fig_width: 6
+      toc: yes
+      reference_docx: "../templates/ReportTemplate.docx" # Insert path for the DOCX file
+      pandoc_args:
+      - --lua-filter=../templates/scholarly-metadata.lua
+      - --lua-filter=../templates/author-info-blocks.lua
+      - --lua-filter=../templates/pagebreak.lua
+    bookdown::html_document2:
+      fig_caption: yes
+      fig_height: 6
+      fig_width: 6
+      toc: yes
+      toc_depth: 3
+      toc_float:
+        collapsed: yes
+        smooth_scroll: yes
+      theme: simplex
+      pandoc_args:
+      - --lua-filter=../templates/scholarly-metadata.lua
+      - --lua-filter=../templates/author-info-blocks.lua
+      - --lua-filter=../templates/pagebreak.lua
+bibliography:
+- references.bib
+csl: "../templates/american-fisheries-society.csl" # Insert path for the bib-style
+---
+
+```{r setup, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  comment = "#>",
+  fig.path = "../figures/",
+  dpi = 300
+)
+```
+
+```{r packages}
+# load these packages
+library(tidyverse)
+library(STADEM)
+library(here)
+library(DABOM)
+library(lubridate)
+library(janitor)
+library(msm)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+
+theme_set(theme_bw())
+
+# knitr options
+options(knitr.kable.NA = '-')
+
+# when knitting to Word, use this
+# what kind of document is being created?
+doc.type <- knitr::opts_knit$get('rmarkdown.pandoc.to')
+
+if(doc.type == 'docx') {
+  options(knitr.table.format = "pandoc")
+}
+
+```
+
+```{r load-data}
+# load configuration and site_df data
+load(here('analysis/data/derived_data',
+          'site_config.rda'))
+```
+
+```{r dam-cnts-sthd, cache=TRUE}
+# what years to examine?
+all_yrs = 2011:2021
+
+# set species
+spp = "Steelhead"
+
+#-----------------------------------------------------------------
+# get the total dam counts from various dams
+dam_cnts = tibble(dam = c("Priest Rapids",
+                          "Rock Island",
+                          "Rocky Reach",
+                          "Wells",
+                          "Tumwater"),
+                  dam_code = c("PRD",
+                               "RIS",
+                               "RRH",
+                               "WEL",
+                               "TUM")) %>%
+  crossing(year = c(all_yrs, 2022)) %>%
+  rowwise() %>%
+  mutate(win_cnt = map2_dbl(dam_code,
+                            year,
+                           .f = function(x, y) {
+                             STADEM::getWindowCounts(dam = x,
+                                                     spp = spp,
+                                                     start_date = paste0(y-1, '0601'),
+                                                     end_date = paste0(y, '0531')) %>%
+                               summarise_at(vars(win_cnt),
+                                            list(sum),
+                                            na.rm = T) %>%
+                               pull(win_cnt)
+                           })) %>%
+  ungroup() %>%
+  select(year, everything())
+
+# got these directly from Ben for each spawn year (June 15 - June 14, which is how it's definted at Tumwater)
+tum_cnts = tibble(year = 2013:2021,
+                  dam = "Tumwater",
+                  dam_code = "TUM",
+                  win_cnt = c(2446,
+                              1186,
+                              1751,
+                              1405,
+                              554,
+                              621,
+                              390,
+                              578,
+                              776))
+
+dam_cnts %<>%
+  left_join(tum_cnts %>%
+              rename(tum_cnt = win_cnt)) %>%
+  mutate(win_cnt = if_else(!is.na(tum_cnt),
+                           tum_cnt,
+                           win_cnt)) %>%
+  select(-tum_cnt)
+
+```
+
+```{r reascension-rates, cache=TRUE}
+# get re-ascension rates for some dams
+reasc_rates <- crossing(year = all_yrs,
+                        pit_code = c("PRA",
+                                     "RIA",
+                                     "RRF")) %>%
+  mutate(reasc_df = map2(pit_code, year,
+                         .f = function(x, y) {
+
+                           res <- try(suppressMessages(queryPITtagData(damPIT = x,
+                                                      spp = "Steelhead",
+                                                      start_date = paste0(y-1, '0601'),
+                                                      end_date = paste0(y, '0531'))) %>%
+                                        filter(!str_detect(TagId, "000.0")) %>%
+                                        mutate(across(TagIdAscentCount,
+                                                      tidyr::replace_na,
+                                                      0)) %>%
+                                        mutate(ReAscent = ifelse(TagIdAscentCount > 1, T, F)) %>%
+                                        mutate(origin = fct_recode(RearType,
+                                                                   "W" = "U")) %>%
+                                        group_by(Species, Date, origin) %>%
+                                        summarise(tot_tags = n_distinct(TagId),
+                                                  reascent_tags = n_distinct(TagId[ReAscent]),
+                                                  .groups = "drop") %>%
+                                        group_by(Species, origin) %>%
+                                        summarise(across(matches('tags'),
+                                                         sum,
+                                                         na.rm = T),
+                                                  .groups = "drop") %>%
+                                        mutate(reasc_rate = reascent_tags / tot_tags,
+                                               reasc_rate_se = sqrt(reasc_rate * (1 - reasc_rate) / tot_tags)) %>%
+                                        select(origin, starts_with("reasc_rate")),
+                                      silent = T)
+                           return(res)
+                         })) %>%
+  mutate(class = map_chr(reasc_df,
+                         .f = function(x) class(x)[1])) %>%
+  filter(class == "tbl_df") %>%
+  select(-class) %>%
+  unnest(reasc_df)
+```
+
+
+```{r pit-move-rates, cache=TRUE}
+# loop over all years
+for(yr in all_yrs) {
+  
+  # set up a tibble to capture results
+  if(yr == min(all_yrs)) {
+    pit_move_tmp = NULL
+  }
+
+  # load compressed detections and biological data
+  load(here('analysis/data/derived_data/PITcleanr',
+            paste0('UC_', spp, '_', yr, '.rda')))
+  
+  
+  # load JAGS MCMC results
+  load(here("analysis/data/derived_data/model_fits",
+            paste0('PRA_DABOM_', spp, '_', yr,'.rda')))
+  
+  # summarize detection probabilities
+  detect_summ = summariseDetectProbs(dabom_mod = dabom_mod,
+                                     filter_ch = filter_obs)
+  # add origin to prepped capture histories
+  pit_obs = prepped_ch %>%
+    left_join(bio_df %>%
+                select(tag_code,
+                       origin)) %>%
+    select(tag_code, origin,
+           everything())
+  
+  # compile and calculate Priest equivalents
+  pit_move_df = tibble(dam = c("Priest Rapids",
+                               "Rock Island",
+                               "Rocky Reach",
+                               "Wells",
+                               "Tumwater"),
+                       dam_code = c("PRD",
+                                    "RIS",
+                                    "RRH",
+                                    "WEL",
+                                    "TUM"),
+                       pit_code = c("PRA",
+                                    "RIA",
+                                    "RRF",
+                                    "WEA",
+                                    "TUM")) %>%
+    add_column(year = yr,
+               .before = 0) %>%
+    crossing(origin = c("W", "H")) %>%
+    left_join(pit_obs %>%
+                group_by(origin) %>%
+                summarize(n_tags = n_distinct(tag_code))) %>%
+    mutate(n_obs = map2_int(pit_code,
+                            origin,
+                            .f = function(x, y) {
+                              pit_obs %>%
+                                filter(origin == y) %>%
+                                summarize(n_obs = n_distinct(tag_code[node == x])) %>%
+                                pull(n_obs)
+                            })) %>%
+    mutate(n_upstrm = map2_int(pit_code,
+                               origin,
+                               .f = function(x, y) {
+                                 pit_obs %>%
+                                   filter(origin == y) %>%
+                                   summarize(n_path = n_distinct(tag_code[str_detect(path, paste0(" ", x))])) %>%
+                                   pull(n_path)
+                               }),
+           n_upstrm = if_else(dam == "Priest Rapids",
+                              n_obs,
+                              n_upstrm)) %>%
+    # generate proportion hatchery/wild based on upstream tags
+    group_by(dam) %>%
+    mutate(prop_org = n_upstrm / sum(n_upstrm),
+           prop_org_se = sqrt((prop_org * (1 - prop_org)) / sum(n_upstrm))) %>%
+    # generate proportion hatchery/wild based on tags detected at dam
+    # mutate(prop_org = n_obs / sum(n_obs),
+    #        prop_org_se = sqrt((prop_org * (1 - prop_org)) / sum(n_obs))) %>%
+    ungroup() %>%
+    # mutate(prop_obs = n_obs / n_tags,
+    #        prop_upstrm = n_upstrm / n_tags) %>%
+    left_join(detect_summ %>%
+                select(node, mean, sd),
+              by = c("pit_code" = "node")) %>%
+    mutate(est_tags = n_obs / mean,
+           est_tags_se = n_obs * sd / mean^2,
+           trans_est = est_tags / n_tags,
+           trans_se = est_tags_se / n_tags) %>%
+    mutate(trans_est = if_else(dam == "Priest Rapids",
+                               1,
+                               trans_est),
+           trans_se = if_else(dam == "Priest Rapids",
+                              0,
+                              trans_se))
+  
+  if(is.null(pit_move_tmp)) {
+    pit_move_tmp = pit_move_df
+  } else {
+    pit_move_tmp <- pit_move_tmp %>%
+      bind_rows(pit_move_df)
+  }
+  
+  rm(detect_summ,
+     pit_obs,
+     pit_move_df)
+}
+
+```
+
+```{r pra-counts, cache=TRUE}
+pit_move_all <- pit_move_tmp %>%
+  left_join(dam_cnts) %>%
+  left_join(reasc_rates) %>%
+  mutate(reasc_avail = if_else(!is.na(reasc_rate),
+                               T, F)) %>%
+  left_join(reasc_rates %>% 
+              group_by(pit_code, origin) %>% 
+              summarize(across(starts_with("reasc"), 
+                               list(mean = mean), 
+                               .names = "{.col}_{.fn}"),
+                        .groups = "drop")) %>%
+  rowwise() %>%
+  mutate(across(reasc_rate,
+                ~ if_else(reasc_avail,
+                          .,
+                          reasc_rate_mean)),
+         across(reasc_rate_se,
+                ~ if_else(reasc_avail,
+                          .,
+                          reasc_rate_se_mean))) %>%
+  select(-reasc_rate_mean,
+         -reasc_rate_se_mean) %>%
+  group_by(year, origin) %>%
+  mutate(reasc_rate_pra = reasc_rate[pit_code == "PRA"],
+         reasc_se_pra = reasc_rate_se[pit_code == "PRA"]) %>%
+  ungroup() %>%
+  mutate(reasc_rate = if_else(!reasc_avail,
+                              reasc_rate_pra,
+                              reasc_rate),
+         reasc_rate_se = if_else(!reasc_avail,
+                                 reasc_se_pra,
+                                 reasc_rate_se)) %>%
+  rowwise() %>%
+  mutate(tot_escp = win_cnt * prop_org * (1 - reasc_rate) / trans_est,
+         tot_escp_se = msm::deltamethod(~ x1 * x2 * (1 - x3) / x4,
+                                          mean = c(win_cnt,
+                                                   prop_org,
+                                                   reasc_rate,
+                                                   trans_est),
+                                          cov = diag(c(0,
+                                                       prop_org_se,
+                                                       reasc_rate_se,
+                                                       trans_se)^2))) %>%
+  mutate(tot_escp_cv = tot_escp_se / tot_escp) %>%
+  mutate(priest_cnt = tot_escp * (1 + reasc_rate_pra),
+         priest_cnt_se = msm::deltamethod(~ x1 * (1 + x2),
+                                          mean = c(tot_escp,
+                                                   reasc_rate_pra),
+                                          cov = diag(c(tot_escp_se,
+                                                       reasc_se_pra)^2))) %>%
+  ungroup() %>%
+  mutate(dam = fct_relevel(dam,
+                           "Tumwater",
+                           after = Inf))
+# drop Tumwater
+pit_move_all %<>%
+  filter(dam_code != "TUM") %>%
+  mutate(across(dam,
+                fct_drop))
+
+
+```
+
+
+# Introduction
+
+The **D**am **A**dult **B**ranch **O**ccupancy **M**odel (DABOM) has been used to estimate steelhead escapement to various locations around the Upper Columbia for nearly a decade. One of the requirements of this model is an accurate estimate of abundance (possibly with uncertainty) _somewhere_ in the system. To this point, we have used dam counts at Priest Rapids Dam to generate that estimate of abundance. We have adjusted the raw counts by an estimated re-ascension rate, to account for fish that may have been counted twice. 
+
+Recently, we have called into question the assumption that the dam counts at Priest Rapids are an accurate depiction of how many steelhead are crossing that dam each day. One reason for this questioning is a comparison between the counts at Priest Rapids, and other upstream dams (i.e Rock Island, Rocky Reach and Wells) (Table \@ref(tab:dam-cnt-tab)). In recent years (2019-2022) the counts were higher at Rock Island dam, the next upstream dam, compared to Priest Rapids, which is surprising because there are no major tributaries between Priest Rapids and Rock Island. Between Rock Island and Rocky Reach some steelhead move into the Wenatchee River, and between Rocky Reach and Wells dam some move into the Entiat River, so we expect those counts to shrink as we move upstream. 
+
+It is important to acknowledge the various processes going on at and between each dam to help understand these discrepancies. First, although the tagged fish at Priest are assumed to be a representative sample of the steelhead run at large crossing Priest, the proportion of hatchery and natural origin fish may be different at different dams as fish move into different populations at different rates depending on their origin. Second, the re-ascension rate may be (and probably is) different at other dams compared to Priest. We have recently begun evaluating re-ascension rates at Rock Island and Rocky Reach, as well as Priest Rapids, but those rates are not available for all years yet.
+
+<!-- However, currently we only have a DART query set up to examine re-ascension at Priest. Therefore, for this exercise we will focus on the equivalent of total fish crossings at Priest (possibly separated by origin).   -->
+
+```{r dam-cnt-tab}
+dam_cnts %>%
+  filter(dam_code != "TUM") %>%
+  group_by(year) %>%
+  mutate(perc_prd = win_cnt / win_cnt[dam_code == "PRD"]) %>%
+  ungroup() %>%
+  mutate(prnt_val = paste0(prettyNum(win_cnt, big.mark = ","),
+                           " (", round(perc_prd, 3) * 100, "%)")) %>%
+  select(Year = year,
+         dam, prnt_val) %>%
+  mutate(across(Year,
+                as.factor)) %>%
+  pivot_wider(names_from = dam,
+              values_from = prnt_val) %>%
+  kable(booktabs = T,
+        linesep = "",
+        caption = "Total steelhead dam counts at mainstem dams on the Columbia River from June 1 of the previous year to May 31 (or the most recent day available in 2022), and the percent of those counts compared to counts at Priest Rapids Dam.",
+        format.args = list(big.mark = ",")) %>%
+  kable_styling()
+```
+
+# Methods
+
+We completed the same analysis for each spawn year between 2011 and 2021. For each dam (Rock Island, Rocky Reach, Wells and Tumwater), we started by examining all the tags put out at Priest Rapids that were observed at or upstream of the $j^{th}$ dam, by origin ($i$). For each dam, we used these groups of tags to estimate the proportion of each origin of fish that crossed each dam ($\pi_{i,j}$). 
+
+$$
+\pi_{i,j} = \frac{t^{up}_{i,j}}{\sum{t^{up}_j}}
+$$
+
+We then examined the number of Priest tags detected at each dam (prior to cleaning the detection data with PITcleanr), separated by origin. We inflated this number by the estimated detection probability estimated for each dam by DABOM ($\hat{p}_j$) to generate an estimate of the number of tasg that crossed each dam. We then divided this estimate by the total number of tags, by origin, that we started with at Priest. This provides an estimate of the probability that a fish would move from Priest past the $j^{th}$ dam, by origin $i$ ($\psi_{i,j}$). 
+
+$$
+t^{est}_{i,j} = \frac{t^{obs}_{i,j}}{\hat{p}_j} \\
+\psi_{i,j} = \frac{t^{est}_{i,j}}{t^{PRD}_i}
+$$
+
+Through a collaboration with the Columbia Basin Research group, a query was constructed from PIT tag detections in PTAGIS to evaluate whether each tag detected at a dam was a first-time crossing, or a re-ascension (the fish had fallen back below the dam and was crossing it again). We used this query to generate estimates of re-ascension rates for origin $i$ at dam $j$ ($\eta_{i,j}$. The re-ascension queries are currently available for Priest Rapids (all years), Rock Island (`r paste(range(unique(reasc_rates$year[reasc_rates$pit_code == "RIA"])), collapse = " - ")`) and Rocky Reach (`r paste(range(unique(reasc_rates$year[reasc_rates$pit_code == "RRF"])), collapse = " - ")`). For Rock Island and Rocky Reach, for years when the specific rate was not available we used the mean across the years we did have. For other dams, we used the re-ascension rate at Priest Rapids for that year.
+
+The next step was to multiply the total dam counts at each dam ($C_j$) by the estimated proportion of origins ($\pi_{i,j}$) and one minus the re-ascention rate ($\eta_{i,j}$), then divide each result by the appropriate movement probability ($\psi_{i,j}$). This provides as estimate of the total number of unique fish, by origin, that crossed Priest, according to the dam count at each dam ($\Gamma_{i,j}$). Using the delta method, the appropriate uncertainty was propogated through this entire process.
+
+$$
+\Gamma_{i,j} = \frac{C_j * \pi_{i,j} * \eta_{i,j}}{\psi_{i,j}} \\
+\Gamma_j = \sum_i{\Gamma_{i,j}}
+$$
+These estimates can be inflated by the re-ascension rate at Priest Rapids and summed across origin to compare to the recorded counts of total steelhead at Priest Rapids. They can also be used to calculate the effect of using different dam counts within DABOM on steelhead escapement estimates across the entire Upper Columbia by origin and year.
+
+# Results
+
+The estimated parameters used in the overall calculations are shown in Table \@ref(tab:param-tab). The resulting estimates of Priest Dam count equivalents are in Table \@ref(tab:prd-cnt-tab), and also presented visually in Figure \@ref(fig:prd-cnt-org-fig). The absolute difference in estimates of unique fish crossing Priest Rapids Dam compared to using counts at Priest, split by origin, is shown in Figure \@ref(fig:abs-diff-fig). The relative impacts to DABOM estimates of abundance from using a different abundance estimate at Priest Rapids, compared to the original estimate, are shown in Figure \@ref(fig:rel-diff-fig) and Table \@ref(tab:dabom-imp-tab). The average relative difference across an early period (2011-2015) and a late period is shown in Table \@ref(tab:period-diff).
+
+```{r param-tab}
+pit_move_all %>%
+  # arrange(year, dam, origin) %>%
+  mutate(across(year,
+                as.factor)) %>%
+  select(year, dam, origin, 
+         prop_org, 
+         reasc_rate,
+         trans_est, 
+         win_cnt) %>%
+  kable(booktabs = TRUE,
+        col.names = c("Year", 
+                      "Dam",
+                     "Origin",
+                     "$\\pi$",
+                     "$\\eta$",
+                     "$\\psi$",
+                     "Total Dam Count (C)"),
+        digits = c(0, 0, 0,
+                   3, 3, 3,
+                   0),
+        escape = F,
+        linesep = "",
+        longtable = T,
+        caption = "Estimated parameters used as inputs for Priest Rapids Dam count equivalents.",
+        format.args = list(big.mark = ",")) %>%
+  kable_styling(latex_options = c("striped",
+                                  "repeat_head"),
+                repeat_header_continued = "$\\textit{(Continued on next page...)}$") %>%
+  row_spec(row = seq(8, nrow(pit_move_all)-1, by = 8),
+           hline_after = T)
+```
+
+```{r prd-cnt-tab}
+prd_rel_diff <- pit_move_all %>%
+  group_by(year, dam, pit_code, reasc_avail) %>%
+  summarize(priest_cnt = sum(priest_cnt),
+            priest_cnt_se = sqrt(sum(priest_cnt_se^2))) %>%
+  left_join(pit_move_all %>%
+              filter(pit_code == "PRA") %>%
+              select(year, win_cnt) %>%
+              distinct()) %>%
+  mutate(across(priest_cnt,
+                ~ if_else(pit_code == "PRA",
+                          win_cnt,
+                          priest_cnt))) %>%
+  mutate(across(priest_cnt_se,
+                ~ if_else(pit_code == "PRA",
+                          NA_real_,
+                          .))) %>%
+  rowwise() %>%
+  mutate(rel_diff = (priest_cnt - win_cnt) / win_cnt,
+         rel_diff_se = msm::deltamethod(~ (x1 - x2) / x2,
+                                        c(priest_cnt,
+                                          win_cnt),
+                                        diag(c(priest_cnt_se, 0)^2)),
+         across(starts_with("rel_diff"),
+                ~ . * 100)) %>%
+  ungroup() %>%
+  select(-pit_code,
+         -win_cnt) %>%
+  mutate(across(year,
+                as.factor))
+
+prd_rel_diff %>%
+  kable(digits = c(rep(0,5), 1,1),
+        col.names = c("Year",
+                      "Dam",
+                      "Re-Ascension\nAvailable",
+                      "Priest Count Equiv.",
+                      "SE Count",
+                      "Relative Difference (%)",
+                      "SE Rel. Diff."),
+        booktabs = T,
+        longtable = T,
+        format.args = list(big.mark = ","),
+        caption = "Estimates of the equivalent of total counts at Priest Rapids dam, and the relative difference compared to counts at Priest that year.") %>%
+  kable_styling(latex_options = c("striped",
+                                  "repeat_head"),
+                repeat_header_continued = "$\\textit{(Continued on next page...)}$") %>%
+  column_spec(c(3:7),
+              width = "0.8in") %>%
+  row_spec(row = seq(4, 40, by = 4),
+           hline_after = TRUE)
+```
+
+```{r prd-cnt-org-fig, fig.cap = "Estimates of unique number of fish crossing Priest Rapids dam, based on counts from different dams (colors). Facted by origin. Errorbars represent 95% confidence intervals."}
+d_wd = 0.6
+pit_move_all %>%
+  ggplot(aes(x = as_factor(year),
+             y = tot_escp,
+             color = dam)) +
+  geom_errorbar(aes(ymax = qnorm(0.975, tot_escp, tot_escp_se),
+                    ymin = qnorm(0.025, tot_escp, tot_escp_se)),
+                width = 0.1,
+                position = position_dodge(width = d_wd)) +
+  geom_point(size = 2,
+             position = position_dodge(width = d_wd)) +
+  facet_wrap(~ origin,
+             # scales = "fixed") +
+             scales = "free_y") +
+  scale_color_brewer(palette = "Set1",
+                     name = "Dam Count Source") +
+  theme(axis.text = element_text(size = 7),
+        axis.text.x = element_text(angle = 45,
+                                   hjust = 1),
+        legend.position = "bottom") +
+  labs(x = "Dam Count Source",
+       y = "Estimated Counts at Priest")
+```
+
+```{r abs-diff-fig, fig.cap = "Absolute differences of the equivalent of total steelhad counts at Priest Rapids Dam, compared to using counts at Priest Rapids, using starting counts from different dams (colors), faceted by origin."}
+pit_move_all %>%
+  group_by(year, origin) %>%
+  mutate(tot_escp_pra = tot_escp[pit_code == "PRA"],
+         tot_escp_pra_se = tot_escp_se[pit_code == "PRA"]) %>%
+  mutate(diff = tot_escp - tot_escp_pra) %>%
+  filter(pit_code != "PRA") %>%
+  ggplot(aes(x = as.factor(year),
+             y = diff,
+             fill = dam)) +
+  facet_wrap(~ origin) +
+  geom_col(position = "dodge") +
+  # scale_fill_brewer(palette = "Set1",
+  #                   name = "Dam") +
+  scale_fill_viridis_d(name = "Dam") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 45,
+                                   hjust = 1)) +
+  labs(x = "Year",
+       y = "Absolute Difference from Priest Rapids")
+
+```
+
+```{r rel-diff-fig, fig.cap = "Relative differences of the equivalent of total steelhad counts at Priest Rapids Dam, using starting counts from different dams (colors), with 95% confidence intervals. The shape of each point depicts whether re-ascension data was available for that dam/year combination." }
+d_w = 0.5
+prd_rel_diff %>%
+  ggplot(aes(x = as.factor(year),
+             y = rel_diff,
+             color = dam,
+             shape = reasc_avail)) +
+  geom_errorbar(aes(ymin = qnorm(0.025, rel_diff, rel_diff_se),
+                    ymax = qnorm(0.975, rel_diff, rel_diff_se)),
+                width = 0,
+                position = position_dodge(d_w)) +
+  geom_point(size = 3,
+             position = position_dodge(d_w)) +
+  scale_color_brewer(palette = "Set1",
+                     name = "Dam") +
+  scale_shape_manual(values = c("TRUE" = 19,
+                                "FALSE" = 1),
+                     name = "Reascension Query\nAvailable") +
+  labs(x = "Spawn Year",
+       y = "Relative Difference (%)\nvs. Total Priest Counts") +
+  theme(axis.text.x = element_text(angle = 45,
+                                   hjust = 1),
+        legend.position = "right")
+
+```
+
+```{r dabom-imp-tab}
+rel_diff_org <- pit_move_all %>%
+  group_by(year, origin) %>%
+  mutate(tot_escp_pra = tot_escp[pit_code == "PRA"],
+         tot_escp_pra_se = tot_escp_se[pit_code == "PRA"]) %>%
+  rowwise() %>%
+  mutate(rel_diff = (tot_escp - tot_escp_pra) / tot_escp_pra,
+         rel_diff_se = msm::deltamethod(~ (x1 - x2) / x2,
+                                        c(tot_escp,
+                                          tot_escp_pra),
+                                        diag(c(tot_escp_se,
+                                               tot_escp_pra_se)^2)),
+         across(starts_with("rel_diff"),
+                ~ . * 100)) %>%
+  ungroup() %>%
+  mutate(across(year,
+                as.factor)) %>%
+  filter(pit_code != "PRA") 
+
+rel_diff_org %>%
+  select(year, 
+         dam,
+         origin,
+         tot_escp,
+         tot_escp_se,
+         tot_escp_pra,
+         rel_diff) %>%
+  kable(booktabs = T,
+        digits = c(rep(0,6),
+                   1),
+        col.names = c("Year",
+                      "Dam",
+                      "Origin",
+                      "Priest Equiv.",
+                      "SE",
+                      "Orginal\nPriest Est.",
+                      "Relative Difference (%)"),
+        linesep = "",
+        longtable = T,
+        format.args = list(big.mark = ","),
+        caption = "Comparison between using original estimate of escapement at Priest by origin with Priest equivalents from various dams. Relative difference would impact all abundance estimates from DABOM equally.") %>%
+  kable_styling(latex_options = c("striped",
+                                  "repeat_head"),
+                repeat_header_continued = "$\\textit{(Continued on next page...)}$") %>%
+  row_spec(row = seq(6, nrow(rel_diff_org)-1, by = 6),
+           hline_after = T)
+
+```
+
+```{r period-diff, eval = T}
+period_df <- rel_diff_org %>%
+  mutate(period = if_else(as.numeric(as.character(year)) < 2016,
+                          "Early", 
+                          "Late")) %>%
+  group_by(Dam = dam, 
+           Origin = origin, 
+           period) %>%
+  summarize(mean = mean(rel_diff),
+            .groups = "drop") %>%
+  pivot_wider(names_from = period,
+              values_from = mean)
+period_df %>%
+  kable(booktabs = T,
+        linesep = "",
+        digits = 2,
+        caption = "Mean relative difference (\\%) between escapement estimates using counts from these dams compared to Priest Rapids, by origin, separated into an early period (2011-2015) and late period (2016-2021).") %>%
+  kable_styling(latex_options = "HOLD_position")
+
+```
+
+\newpage
+
+# Discussion
+
+In recent years, there appears to be some discrepancy between dam counts of steelhead at Priest Rapids dam, and those further upstream, particularly Rock Island and Rocky Reach. Focusing on Rock Island, the average differences have shifted from less than 1% in 2011-2015 to more than 20% in recent years (2016-2021). The choice of using counts at Priest Rapids or Rock Island will have a substantial impact on estimates of escapement throughout the Upper Columbia.
+
+It is unclear exactly what has caused this shift in recent years. Although the counts for spawn year 2022 have not been completed, they show a large exasperation of this problem, with the raw counts being 60% higher at Rock Island compared to Priest Rapids, and nearly 40% higher at Rocky Reach, despite the loss of all the fish that turned up the Wenatchee between Rock Island and Rocky Reach. 
+
+Counts at Rock Island and Rocky Reach dams are overseen by Chelan County Public Utility District (PUD), while Grant County PUD is in charge of counts at Priest Rapids Dam, and Douglas County PUD runs the counts at Wells Dam. There is a lot of consistency between Rock Island and Rocky Reach estimates (Figures \@ref(fig:prd-cnt-org-fig) and \@ref(fig:rel-diff-fig)), suggesting operations at each dam may explain at least part of the differences between estimates.
+
+While escapement estimates can be generated by any of these dam counts using the DABOM model, clearly the choice of dam to use will make a substantial impact (up to a 35% difference (Table \@ref(tab:dabom-imp-tab)). In addition, there may be other analyses that rely solely on counts from an individual dam, or a combination of counts from multiple dams. This evaluation has shown there is not consistency of counts between these dams in recent years, calling into question the results from any of those types of analyses. 
+
