@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: summarize DABOM results
 # Created: 4/1/20
-# Last Modified: 6/9/2022
+# Last Modified: 6/15/2022
 # Notes:
 
 #-----------------------------------------------------------------
@@ -18,17 +18,20 @@ library(moments)
 library(coda)
 library(here)
 
-#-----------------------------------------------------------------
-# set year
-yr = 2021
 
 #-----------------------------------------------------------------
 # load configuration and site_df data
 load(here('analysis/data/derived_data',
           'site_config.rda'))
 
+#-----------------------------------------------------------------
+# set year
+yr = 2021
 
-# for(yr in 2011:2020) {
+#-----------------------------------------------------------------
+# run for set of years
+# for(yr in 2011:2021) {
+
   cat(paste("Working on", yr, "\n\n"))
 
   # load compressed detections and biological data
