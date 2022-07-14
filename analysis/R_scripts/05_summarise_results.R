@@ -31,11 +31,11 @@ yr = 2021
 # what dam count to use?
 dam_cnt_name = c("PriestRapids",
                  "RockIsland",
-                 "RockyReach")[1]
+                 "RockyReach")[2]
 
 #-----------------------------------------------------------------
 # run for set of years
-# for(yr in 2015:2021) {
+for(yr in 2011:2021) {
 
   cat(paste("Working on", yr, "\n\n"))
 
@@ -885,15 +885,30 @@ dam_cnt_name = c("PriestRapids",
                 bio_list,
                 mark_grp_list)
 
-  writexl::write_xlsx(x = save_list,
-                      path = here('outgoing/estimates',
-                                  paste0('UC_Steelhead_', yr, '_', format(Sys.Date(), '%Y%m%d'), '.xlsx')))
+  # save results to be accessed later
+  save(save_list,
+       detect_summ,
+       trans_summ,
+       escape_summ,
+       pop_summ,
+       dam_cnt_name,
+       dam_escp_df,
+       configuration,
+       flowlines,
+       parent_child,
+       sites_sf,
+       file = here(paste0('analysis/data/derived_data/estimates/', dam_cnt_name),
+                   paste0("PRA_DABOM_Steelhead_", yr, ".rda")))
 
+  # excel_file_path = if_else(dam_cnt_name == "PriestRapids",
+  #                           'outgoing/estimates',
+  #                           paste0('outgoing/estimates/', dam_cnt_name))
+  #
   # writexl::write_xlsx(x = save_list,
-  #                     path = here('outgoing/estimates/RockIslandCnts',
+  #                     path = here(excel_file_path,
   #                                 paste0('UC_Steelhead_', yr, '_', format(Sys.Date(), '%Y%m%d'), '.xlsx')))
 
-# }
+}
 
 
 
