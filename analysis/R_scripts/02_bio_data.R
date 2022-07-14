@@ -287,6 +287,62 @@ bio_df %<>%
   bind_rows(bio_2021 %>%
               select(any_of(names(bio_df))))
 
+#-----------------------------------------------------------------
+# add 2022
+
+bio_2022 <- read_csv(here("analysis/data/raw_data/WDFW",
+                          "2021 OLAFT Steelhead CME-2021-183-PRD final.csv")) %>%
+  janitor::clean_names() %>%
+  mutate(brood_year = "BY22") %>%
+  mutate(year = paste0("20", str_remove(brood_year, "^BY")),
+         year = as.numeric(year)) %>%
+  mutate(species = "ST") %>%
+  mutate(record_id = seq(from = max(bio_df$record_id) + 1,
+                         by = 1,
+                         length.out = n())) %>%
+  select(record_id,
+         brood_year,
+         year,
+         tag_code = pit_tag,
+         species,
+         trap_date = event_date,
+         sex,
+         origin = final_origin,
+         fork_length = length,
+         age = scale_age,
+         ad_clip = adipose_clip,
+         fin_clip = fin_clip,
+         cwt_snout = cwt_s,
+         cwt_body) %>%
+  mutate(trap_date = mdy_hm(trap_date)) %>%
+  mutate(age = str_replace(age, '^r', 'R')) %>%
+  mutate(ad_clip = if_else(!is.na(ad_clip),
+                           "AD",
+                           NA_character_)) %>%
+  mutate(sex = recode(sex,
+                      "Female" = "F",
+                      "Male" = "M")) %>%
+  mutate(across(c(starts_with("CWT")),
+                ~ if_else(!is.na(.), T, F))) %>%
+  mutate(cwt = if_else(cwt_snout,
+                       "SN",
+                       if_else(cwt_body,
+                               "BD",
+                               NA_character_))) %>%
+  mutate(age_split = str_split(age, "\\."),
+         final_age = map_dbl(age_split,
+                             .f = function(x) {
+                               sum(as.numeric(x[1]),
+                                   as.numeric(x[2]))
+                             })) %>%
+  select(any_of(names(bio_df)))
+
+#-----------------------------------------------------------------
+# add to overall list
+bio_df %<>%
+  bind_rows(bio_2022 %>%
+              select(any_of(names(bio_df))))
+
 
 #-----------------------------------------------------------------
 # save as Excel file
