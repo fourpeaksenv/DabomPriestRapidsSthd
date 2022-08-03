@@ -173,7 +173,7 @@ library(xml2)
 # use locally downloaded copy
 xml_file = here('analysis/data/raw_data/WDFW/CME-2020-192-PRD.XML')
 # query it from PTAGIS
-xml_file = "https://api.ptagis.org/files/mrr/CME-2020-192-PRD.XML"
+# xml_file = "https://api.ptagis.org/files/mrr/CME-2020-192-PRD.XML"
 
 data <- xml2::read_xml(xml_file)
 doc <- XML::xmlParse(data)
