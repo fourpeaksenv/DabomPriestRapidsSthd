@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: create tag lists to feed to PTAGIS query
 # Created: 4/1/2020
-# Last Modified: 1/18/2022
+# Last Modified: 9/27/2022
 # Notes:
 
 #-----------------------------------------------------------------
@@ -297,6 +297,9 @@ bio_2022 <- read_csv(here("analysis/data/raw_data/WDFW",
   mutate(year = paste0("20", str_remove(brood_year, "^BY")),
          year = as.numeric(year)) %>%
   mutate(species = "ST") %>%
+  mutate(across(sex,
+                recode,
+                "FemaleFemale" = "F")) %>%
   mutate(record_id = seq(from = max(bio_df$record_id) + 1,
                          by = 1,
                          length.out = n())) %>%
@@ -340,6 +343,7 @@ bio_2022 <- read_csv(here("analysis/data/raw_data/WDFW",
 #-----------------------------------------------------------------
 # add to overall list
 bio_df %<>%
+  filter(brood_year != "BY22") %>%
   bind_rows(bio_2022 %>%
               select(any_of(names(bio_df))))
 
