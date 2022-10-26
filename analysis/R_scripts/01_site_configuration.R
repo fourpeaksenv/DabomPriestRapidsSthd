@@ -538,9 +538,12 @@ node_graph = tidygraph::tbl_graph(nodes = nodes,
                                   edges = edges)
 
 node_p = node_graph %>%
-  ggraph(layout = "tree") +
+  # ggraph(layout = "tree") +
   # ggraph(layout = "partition") +
   # ggraph(layout = "kk") +
+  ggraph(layout = "tree",
+         circular = F,
+         flip.y = F) +
   geom_edge_link(arrow = arrow(length = unit(2, 'mm'),
                                type = "closed"),
                  end_cap = circle(4, 'mm')) +
@@ -560,6 +563,13 @@ node_p
 # save as pdf
 library(here)
 ggsave(here("analysis/figures/PriestRapids_DABOM_sites.pdf"),
+       node_p,
+       width = 9,
+       height = 6)
+
+# save as png
+ggsave(here("analysis/figures",
+            "PriestRapids_DABOM_sites.png"),
        node_p,
        width = 9,
        height = 6)
