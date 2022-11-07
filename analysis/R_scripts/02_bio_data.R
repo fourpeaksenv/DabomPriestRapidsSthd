@@ -303,6 +303,11 @@ bio_2022 <- read_csv(here("analysis/data/raw_data/WDFW",
   mutate(record_id = seq(from = max(bio_df$record_id) + 1,
                          by = 1,
                          length.out = n())) %>%
+  # fix one origin call
+  mutate(across(final_origin,
+                ~ if_else(is.na(final_origin) & pit_tag == "3DD.003DA289A1",
+                          "H",
+                          .))) %>%
   select(record_id,
          brood_year,
          year,
