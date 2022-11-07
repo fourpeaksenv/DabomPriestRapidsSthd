@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: clean PTAGIS data with PITcleanr
 # Created: 4/27/20
-# Last Modified: 9/27/22
+# Last Modified: 11/7/22
 # Notes:
 
 #-----------------------------------------------------------------
@@ -158,6 +158,7 @@ tag_path = summarizeTagData(filter_obs,
             by = c('spawn_node' = 'end_loc')) %>%
   rename(tag_path = path)
 
+# check if any user definied keep_obs lead to invalid paths
 error_tags = filter_obs %>%
   left_join(tag_path) %>%
   rowwise() %>%
@@ -172,7 +173,22 @@ error_tags %>%
   left_join(wdfw_df) %>%
   as.data.frame()
 
-prepped_ch = wdfw_df
+
+prepped_ch %>%
+  select(-user_keep_obs) %>%
+  left_join(wdfw_df %>%
+              select(tag_code:max_det,
+                     user_keep_obs)) %>%
+  tabyl(auto_keep_obs,
+        user_keep_obs)
+
+
+
+prepped_ch = prepped_ch %>%
+  select(-user_keep_obs) %>%
+  left_join(wdfw_df %>%
+              select(tag_code:max_det,
+                     user_keep_obs))
 
 save(parent_child, configuration, start_date, bio_df, prepped_ch,
      file = here('analysis/data/derived_data/PITcleanr',
