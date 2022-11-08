@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: prep and run DABOM
 # Created: 4/1/20
-# Last Modified: 12/15/2021
+# Last Modified: 11/7/2022
 # Notes:
 
 #-----------------------------------------------------------------
@@ -22,7 +22,7 @@ load(here('analysis/data/derived_data/site_config.rda'))
 # Load required DABOM data
 #-----------------------------------------------------------------
 # set year
-yr = 2021
+yr = 2022
 
 # for(yr in 2011:2019) {
 #   cat(paste("Working on", yr, "\n\n"))
