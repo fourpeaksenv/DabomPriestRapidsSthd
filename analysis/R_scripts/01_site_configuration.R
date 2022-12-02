@@ -294,7 +294,10 @@ sites_sf = writeOldNetworks()$PriestRapids %>%
                 recode,
                 "BelowJD1" = "JDA"),
          path = str_replace(path, "BelowJD1", "JDA")) %>%
-  rename(site_code = SiteID) %>%
+  select(site_code = SiteID) %>%
+  # add some extra sites
+  bind_rows(tibble(site_code = c("EBO"))) %>%
+  distinct() %>%
   left_join(configuration) %>%
   group_by(site_code) %>%
   filter(config_id == max(config_id)) %>%
