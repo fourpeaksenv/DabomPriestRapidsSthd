@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: Develop configuration file for DABOM
 # Created: 4/1/20
-# Last Modified: 6/7/21
+# Last Modified: 12/19/22
 # Notes:
 #
 # # install some needed packages
@@ -18,9 +18,9 @@
 #                    "moments",
 #                    "coda"))
 #
-# devtools::install_github("BiomarkABS/STADEM")
-# devtools::install_github("BiomarkABS/PITcleanr")
-# devtools::install_github("BiomarkABS/DABOM")
+# devtools::install_github("KevinSee/STADEM")
+# devtools::install_github("KevinSee/PITcleanr")
+# devtools::install_github("KevinSee/DABOM")
 
 #-----------------------------------------------------------------
 # load needed libraries
@@ -70,6 +70,9 @@ configuration = org_config %>%
                         node)) %>%
   mutate(node = if_else(node == "LWE",
                         'LWEB0',
+                        node),
+         node = if_else(site_code == "LWB",
+                        "LWEB0",
                         node),
          node = if_else(site_code %in% c('TUF', 'TUMFBY', 'TUM'),
                         'TUM',
@@ -147,6 +150,9 @@ configuration = org_config %>%
          node = if_else(node == "LMR",
                         'LMRB0',
                         node),
+         node = if_else(site_code == "LMB",
+                        "LMRB0",
+                        node),
          node = if_else(site_code == 'LBC' & config_id == 100,
                         'LBCB0',
                         node),
@@ -182,9 +188,9 @@ configuration = org_config %>%
          # node = if_else(site_code %in% c('OBF', 'OMF'),
          #               'OMKA0',
          #               node),
-         node = if_else(site_code == "OMF",
-                        "OBF",
-                        node),
+         # node = if_else(site_code == "OMF",
+         #                "OBF",
+         #                node),
          node = if_else(site_code == 'ZSL',
                         if_else(grepl('Weir 3', antenna_group, ignore.case = T),
                                 'ZSLB0',
@@ -199,10 +205,10 @@ configuration = org_config %>%
          node = if_else(site_code == 'OMK' & config_id == 100,
                         'OMKB0',
                         node),
-         # combine some sites above OKV into the upstream array at OKV
-         node = if_else(site_code %in% c("OKS", "OKW"),
-                        "OKVA0",
-                        node),
+         # # combine some sites above OKV into the upstream array at OKV
+         # node = if_else(site_code %in% c("OKS", "OKW"),
+         #                "OKVA0",
+         #                node),
          node = if_else(site_code == 'RCT' & config_id == 100,
                         'RCTB0',
                         node),
@@ -244,11 +250,14 @@ configuration = org_config %>%
          node = if_else(site_code %in% c('BBT', 'COP', 'PAT'),
                         'HSTA0',
                         node),
+         # node = if_else(site_code %in% c('30M', 'BR0', 'JDM', 'SJ1', 'SJ2', 'MJ1', 'RCJ'),
+         #                'JD1A0',
+         #                node),
+         node = if_else(as.integer(stringr::str_split(rkm, '\\.', simplify = T)[,1]) == 351,
+                        "JD1A0",
+                        node),
          node = if_else(site_code == 'JD1',
                         'JD1B0',
-                        node),
-         node = if_else(site_code %in% c('30M', 'BR0', 'JDM', 'SJ1', 'SJ2', 'MJ1'),
-                        'JD1A0',
                         node),
          node = if_else(site_code != 'JD1' & as.integer(stringr::str_split(rkm, '\\.', simplify = T)[,1]) < 351,
                         'JDA',
@@ -294,10 +303,17 @@ sites_sf = writeOldNetworks()$PriestRapids %>%
                 recode,
                 "BelowJD1" = "JDA"),
          path = str_replace(path, "BelowJD1", "JDA")) %>%
-  select(site_code = SiteID) %>%
-  # add some extra sites
-  bind_rows(tibble(site_code = c("EBO"))) %>%
-  distinct() %>%
+  rename(site_code = SiteID) %>%
+  # add a few sites in the Okanogan region
+  # exclude CHJO because fish detected there have some strange detection histories
+  bind_rows(tibble(site_code = c(#"CHJO",
+    "OMF",
+    "OKM",
+    "OKW",
+    "SKA",
+    "OKS",
+    "OKP",
+    "OMH"))) %>%
   left_join(configuration) %>%
   group_by(site_code) %>%
   filter(config_id == max(config_id)) %>%
@@ -351,6 +367,8 @@ flowlines %<>%
   anti_join(nhd_upstrm_lst$flowline %>%
               st_drop_geometry() %>%
               select(Hydroseq))
+
+
 #-----------------------------------------------------------------
 # plot the flowlines and the sites
 ggplot() +
@@ -359,6 +377,7 @@ ggplot() +
               size = StreamOrde)) +
   scale_color_viridis_d(direction = -1,
                         option = "D",
+                        name = "Stream\nOrder",
                         end = 0.8) +
   scale_size_continuous(range = c(0.2, 1.2),
                         guide = 'none') +
@@ -373,9 +392,9 @@ ggplot() +
   #           st_convex_hull(),
   #         fill = NA,
   #         lwd = 2) +
-  geom_sf(data = sites_sf,
-          size = 4,
-          color = "black") +
+geom_sf(data = sites_sf,
+        size = 4,
+        color = "black") +
   geom_sf_label(data = sites_sf,
                 aes(label = site_code)) +
   geom_sf_label(data = sites_sf %>%
@@ -383,27 +402,12 @@ ggplot() +
                 aes(label = site_code),
                 color = "red") +
   theme_bw() +
-  theme(axis.title = element_blank()) +
-  labs(color = "Stream\nOrder")
+  theme(axis.title = element_blank())
 
 
 #-----------------------------------------------------------------
 # build parent child table
 parent_child = sites_sf %>%
-  # filter(! site_code %in% c("EBO")) %>%
-  # filter(! site_code %in% c("MC1", "MC2", "MCJ",
-  #                           "FDD",
-  #                           "MWC",
-  #                           "YHC",
-  #                           "HN1", "HN3",
-  #                           "HSM", "HSU",
-  #                           "LOR",
-  #                           "EWC",
-  #                           "LBT",
-  #                           "LTP",
-  #                           "BBP", "BCP",
-  #                           "MRT", "HSL",
-  #                           "ENM", 'ENS', 'TY4', '3D4')) %>%
   buildParentChild(flowlines,
                    # rm_na_parent = T,
                    add_rkm = F) %>%
@@ -433,9 +437,17 @@ parent_child = sites_sf %>%
                                   c("METH", "MRW", "MRC"),
                                   c("SCP", "METH", "MSH"),
                                   c("SCP", 'MSH', 'MRC'),
+                                  c("SCP", "WINT", "MRC"),
                                   c("WHS", "OKC", "ZSL"),
                                   c("WHS", "ZSL", "OKL"),
+                                  c("OMK", "OMF", "OBF"),
+                                  c("OBF", "OMH", "OMF"),
                                   c("ZSL", 'OKV', 'OKC'),
+                                  c("ZSL", "OKM", "OKC"),
+                                  c("OKC", "SKA", "OKM"),
+                                  c("OKC", "OKW", "OKM"),
+                                  c("OKC", "OKS", "SKA"),
+                                  c("OKC", "OKP", "SKA"),
                                   c("JOH", 'WHS', 'OKL'),
                                   c("JOH", 'BPC', 'OKL'),
                                   c("JOH", 'ANT', 'OKL'),
@@ -443,6 +455,23 @@ parent_child = sites_sf %>%
                                   c("JOH", 'AEN', 'OKL')),
                   switch_parent_child = list(c("RSH", "PRA"))) %>%
   filter(!parent %in% c("WEH", "PRH"))
+
+parent_child %>%
+  filter(child %in% child[duplicated(child)])
+
+parent_child %>%
+  filter(child %in% c("OMF",
+                      "OKM",
+                      "OKW",
+                      "SKA",
+                      "OKS",
+                      "OKP",
+                      "OMH") |
+           parent %in% c("OBF",
+                         "OKC",
+                         "OKM",
+                         "SKA",
+                         "OMF"))
 
 # add RKMs from configuration file (since we had to fix at least one from PTAGIS)
 parent_child %<>%
@@ -493,12 +522,33 @@ save(configuration,
      parent_child,
      file = here('analysis/data/derived_data/site_config.rda'))
 
+#-----------------------------------------------------------------
+# pull out configuration info about all sites in the model
+uc_sites <- configuration %>%
+  filter(site_code %in% sites_sf$site_code) %>%
+  select(node) %>%
+  distinct() %>%
+  left_join(configuration) %>%
+  select(site_code, node, site_name, site_type) %>%
+  distinct() %>%
+  arrange(node, site_code)
+
+write_csv(uc_sites,
+          file = here("analysis/data/derived_data",
+                      "UC_DABOM_sites_nodes.csv"))
+
+# save flowlines
+st_write(flowlines,
+         dsn = here("analysis/data/derived_data",
+                    "UC_flowlines.gpkg"))
 
 #-----------------------------------------------------------------
 # Build network diagram
 # simple
 pc_graph = plotNodes(parent_child,
                      layout = "tree")
+pc_graph
+
 
 pc_nodes_graph = parent_child %>%
   addParentChildNodes(configuration) %>%
@@ -522,7 +572,9 @@ node_order = buildNodeOrder(parent_child) %>%
                                                              if_else(step_2 != "RIA" & !is.na(step_2),
                                                                      "Downstream",
                                                                      "Other"))))))) %>%
-  select(-starts_with("step"))
+  select(-starts_with("step")) %>%
+  mutate(across(branch_nm,
+                as.factor))
 
 nodes = buildNodeGraph(parent_child) %>%
   as_tibble() %>%
@@ -540,6 +592,8 @@ library(ggraph)
 node_graph = tidygraph::tbl_graph(nodes = nodes,
                                   edges = edges)
 
+# pd = 0.1
+
 node_p = node_graph %>%
   # ggraph(layout = "tree") +
   # ggraph(layout = "partition") +
@@ -551,13 +605,15 @@ node_p = node_graph %>%
                                type = "closed"),
                  end_cap = circle(4, 'mm')) +
   geom_node_point(size = 7,
+                  # position = position_dodge2(width = pd),
                   aes(color = branch_nm)) +
   theme_graph(base_family = 'Times') +
   theme(legend.position = 'none') +
   scale_color_brewer(palette = "Set1",
                      na.value = "black") +
   geom_node_label(aes(label = label),
-                  size = 2,
+                  size = 1.5,
+                  # position = position_dodge2(width = pd),
                   label.padding = unit(0.1, 'lines'),
                   label.size = 0.1)
 
@@ -565,7 +621,8 @@ node_p
 
 # save as pdf
 library(here)
-ggsave(here("analysis/figures/PriestRapids_DABOM_sites.pdf"),
+ggsave(here("analysis/figures",
+            "PriestRapids_DABOM_sites.pdf"),
        node_p,
        width = 9,
        height = 6)

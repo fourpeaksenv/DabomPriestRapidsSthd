@@ -1,0 +1,553 @@
+site_code,node,site_name,site_type
+AEN,AEN,Aeneas Creek Temporary Array,INT
+ANT,ANTA0,Antoine Creek Instream Array,INT
+ANT,ANTB0,Antoine Creek Instream Array,INT
+BPC,BPCA0,Bonaparte Creek Instream Array,INT
+BPC,BPCB0,Bonaparte Creek Instream Array,INT
+BVC,BVCA0,"Beaver Creek, Methow River",INT
+BVC,BVCB0,"Beaver Creek, Methow River",INT
+CHIWAR,CHLA0,Chiwawa River,MRR
+CHL,CHLA0,Lower Chiwawa River,INT
+CHP,CHLA0,Chiwawa Acc. Pond,INT
+CHL,CHLB0,Lower Chiwawa River,INT
+CHM,CHMA0,Chumstick Creek,INT
+CHM,CHMB0,Chumstick Creek,INT
+CHIKAC,CHUA0,"Chikamin Creek, tributary to Chiwawa River",MRR
+CHU,CHUA0,Upper Chiwawa River,INT
+CHU,CHUB0,Upper Chiwawa River,INT
+CHIWAC,CHWA0,"Chiwaukum Creek, tributary to Wenatchee River",MRR
+CHW,CHWA0,Chiwaukum Creek,INT
+CHW,CHWB0,Chiwaukum Creek,INT
+CLK,CLK,Colockum Creek,INT
+CRU,CRUA0,Upper Chewuch Instream Array,INT
+CRU,CRUB0,Upper Chewuch Instream Array,INT
+CRW,CRWA0,Chewuch River above Winthrop,INT
+CRW,CRWB0,Chewuch River above Winthrop,INT
+EBO,EBOB0,East Bank Hatchery Outfall,INT
+EHL,EHLA0,Entiat NFH Adult Ladder,INT
+EHL,EHLB0,Entiat NFH Adult Ladder,INT
+ENA,ENAA0,Upper Entiat River at rkm 17.1,INT
+ENM,ENAA0,Middle Entiat River,INT
+ENS,ENAA0,Upper Entiat River at rkm 35.7,INT
+ENA,ENAB0,Upper Entiat River at rkm 17.1,INT
+ENF,ENFA0,Upper Entiat River at rkm 40.6,INT
+ENF,ENFB0,Upper Entiat River at rkm 40.6,INT
+ENL,ENLA0,Lower Entiat River,INT
+ENL,ENLB0,Lower Entiat River,INT
+FST,FST,Foster Creek,INT
+GLC,GLCA0,"Gold Creek, Methow River",INT
+GLC,GLCB0,"Gold Creek, Methow River",INT
+HST,HSTB0,Touchet River at Harvey Shaw,INT
+ICH,ICHB0,Ice Harbor Dam (Combined),INT
+ICL,ICLA0,Lower Icicle Instream Array,INT
+ICL,ICLB0,Lower Icicle Instream Array,INT
+ICM,ICMA0,Middle Icicle Instream Array,INT
+ICM,ICMB0,Middle Icicle Instream Array,INT
+ICU,ICUA0,Upper Icicle Instream Array,INT
+ICU,ICUB0,Upper Icicle Instream Array,INT
+JD1,JD1B0,"John Day River, McDonald Ferry",INT
+158,JDA,Fifteenmile Ck at Eightmile Ck,INT
+15D,JDA,Fifteenmile Ck at Dry Ck,INT
+15MILC,JDA,"Fifteen Mile Creek, near The Dalles, Oregon",MRR
+15R,JDA,Fifteenmile Ck at Ramsey Ck,INT
+3MIL2C,JDA,"Threemile Creek, The Dalles",MRR
+85M,JDA,Eightmile Ck at Fivemile Ck,INT
+AB1,JDA,Abernathy Creek FWS Tech Cntr.,INT
+AB2,JDA,Abernathy Creek Farmers Bridge,INT
+AB3,JDA,Lower Abernathy Creek,INT
+AB4,JDA,Abernathy Creek Hatch Channel,INT
+ABEH,JDA,Abernathy SCTC,MRR
+ABERC,JDA,"Abernathy Creek, Lower Columbia River, Washington",MRR
+ANTELC,JDA,Antelope Creek - tributary to Trout Creek (TROU2C) in the Deschutes River basin,MRR
+ASMEBR,JDA,Astoria-Megler Bridge ,MRR
+B1J,JDA,BONNEVILLE PH1 JUVENILE,INT
+B2A,JDA,BONNEVILLE ADULT WA SHORE,INT
+B2J,JDA,Bonneville PH2 Juvenile,INT
+BAD,JDA,Barrier Dam,MRR
+BAKEOC,JDA,"Bakeoven Creek, Deschutes River Basin",MRR
+BCC,JDA,BON PH2 Corner Collector,INT
+BCHINL,JDA,Lake Billy Chinook,MRR
+BCL,JDA,Big Cliff Dam - North Santiam River,MRR
+BCLFBY,JDA,BCL - Release into the Forebay within 0.5 km upstream of Dam,MRR
+BCLTAL,JDA,BCL - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+BEAR3C,JDA,"Bear Creek, Columbia River Estuary, Oregon",MRR
+BERRYC,JDA,Berry Creek - Clackamas Subbasin,MRR
+BHL,JDA,Adult Fishway at BONH,INT
+BIG1C,JDA,"Big Creek, lower Columbia River near Knappa, OR",MRR
+BIGC,JDA,Big Creek Hatchery (ODFW) near Knappa,MRR
+BIGWSP,JDA,Big White Salmon Ponds,MRR
+BLKBAS,JDA,"Blackberry Acc. Site, WF Hood River",MRR
+BLNDSL,JDA,Blind Slough Net Pens (Oregon side of Columbia River Estuary),MRR
+BLUEC,JDA,"Blue Creek, Klickitat River Basin",MRR
+BO1,JDA,Bonneville Bradford Is. Ladder,INT
+BO1BYP,JDA,BON - Release into PH1 Juvenile Facility Bypass Flume/Pipe,MRR
+BO1GWL,JDA,BON - Release into PH1 Gatewell(s),MRR
+BO2,JDA,Bonneville Cascades Is. Ladder,INT
+BO2BCC,JDA,BON - Release into the PH2 Bypass Corner Collector,MRR
+BO2BYP,JDA,BON - Release into the PH2 Juvenile Facility Bypass Flume/Pipe,MRR
+BO2GAT,JDA,BON - Release into the PH2 Juvenile Facility Flume between the Separator Exit and the Primary PIT-Tag Diversion Gate,MRR
+BO2GWL,JDA,BON - Release into PH2 Gatewell(s),MRR
+BO2ORI,JDA,BON - Release into PH2 Orifice(s),MRR
+BO2RRR,JDA,BON - Release below the PH2 Juvenile Facility PIT-Tag Diversion System Gate with subsequent Return to the River,MRR
+BO3,JDA,Bonneville WA Shore Ladder/AFF,INT
+BO4,JDA,Bonneville WA Ladder Slots,INT
+BON,JDA,Bonneville Dam Complex,MRR
+BONAFF,JDA,BON - Adult Fish Facility,MRR
+BONH,JDA,Bonneville Hatchery,MRR
+BONLD1,JDA,BON - Release into the Bradford Island Adult Fish Ladder,MRR
+BONLD2,JDA,BON - Release into the Cascades Island Adult Fish Ladder,MRR
+BONLD3,JDA,BON - Release into the Washington Shore Adult Fish Ladder,MRR
+BONMRT,JDA,BON - Mortality Recovery,MRR
+BOWMNC,JDA,"Bowman Creek, tributary to Little Klickitat River",MRR
+BREITR,JDA,"Breitenbush River, North Santiam River Basin",MRR
+BRUS2C,JDA,"Brush Creek, Klickitat River Basin",MRR
+BUCK3C,JDA,"Buck Creek, White Salmon River Basin (WA)",MRR
+BUCKHC,JDA,"Buckhollow Creek, Deschutes River Basin",MRR
+BVJ,JDA,BONNEVILLE DAM DMS1 SUBSAMPLE,INT
+BVX,JDA,Bonneville PH1 Juvenile (Exp.),INT
+BWL,JDA,Bonneville WA Shore Ladder,INT
+CAL,JDA,Carson NFH Adult Return Ladder,INT
+CALAPR,JDA,Calapooia River,MRR
+CAMPSL,JDA,"Campbell Slough, Lower Columbia",MRR
+CANDLC,JDA,"Candle Creek, tributary to the Metolius River",MRR
+CANY3C,JDA,"Canyon Creek, tributary to the Metolius River",MRR
+CARS,JDA,Carson National Fish Hatchery,MRR
+CBD,JDA,Clear Branch Dam,MRR
+CBDFBY,JDA,CBD - Release into the Forebay within 0.5 km upstream of Dam,MRR
+CBL,JDA,Clear Branch below the Dam,INT
+CBS,JDA,Clear Branch Dam spillway,INT
+CCC,JDA,"Carrolls Channel, Lwr Col Riv",INT
+CEDARC,JDA,"Cedar Creek, tributary to Lewis River",MRR
+CFD,JDA,Cowlitz Falls Dam,INT
+CFD,JDA,Cowlitz Falls Dam,MRR
+CFDNSC,JDA,CFD - Release into North Shore Collector Flume,MRR
+CFDSF2,JDA,CFD - Release directly into spillway flume 2,MRR
+CFDSF3,JDA,CFD - Release directly into spillway flume 3,MRR
+CFDTAL,JDA,CFD - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+CFF,JDA,Castile Falls Fishway,INT
+CGJ,JDA,Cougar Dam PFFC,INT
+CGR,JDA,Cougar Dam,MRR
+CGRTAL,JDA,CGR - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+CHENC,JDA,"Chenoweth Creek, The Dalles",MRR
+CHINOR,JDA,"Chinook River, Washington (Columbia River Estuary)",MRR
+CIC,JDA,"Cottonwood Island, Lwr Col Rvr",INT
+CISPUR,JDA,Cispus River - tributary to Cowlitz River,MRR
+CLCKMS,JDA,Clackamas River,MRR
+CLEA3C,JDA,Clear Creek - tributary to Muddy River,MRR
+CLEARP,JDA,Clear Creek Acclimation Pond,MRR
+CLRBR,JDA,"Clear Branch, Middle Fork Hood River Watershed",MRR
+COLR,JDA,Columbia River (Archaic - replaced with reach-specific definitions),MRR
+COLR1,JDA,"Columbia River - mouth to Three Tree Point, WA (km 0-49)",MRR
+COLR10,JDA,Columbia River - East Arrow Park to Revelstoke (km 1359 - 1476),MRR
+COLR2,JDA,"Columbia River - Three Tree Point, WA to Lewis River (km 49-140)",MRR
+COLR3,JDA,Columbia River - Lewis River to Bonneville Dam (km 140-234),MRR
+COLR4,JDA,Columbia River - Bonneville Dam to John Day Dam (km 234-347),MRR
+COLR5,JDA,Columbia River - John Day Dam to Snake River (km 347-522),MRR
+COLR6,JDA,Columbia River - Snake River to Lower Crab Creek (km 522-661),MRR
+COLR7,JDA,"Columbia River - Lower Crab Creek to Chelan Falls, WA (km 661-809)",MRR
+COLR8,JDA,"Columbia River - Chelan Falls, WA to Grand Coulee Dam (km 809-960)",MRR
+COLR9,JDA,"Columbia River - Grand Coulee Dam to East Arrow Park, CAN (km 960-1359)",MRR
+COWEAP,JDA,Coweeman Acclimation Pond,MRR
+COWEER,JDA,"Coweeman River, tributary to Cowlitz River",MRR
+COWLR1,JDA,Cowlitz River - mouth to Cispus River (km 0-135),MRR
+COWLR2,JDA,Cowlitz River - Cispus River to Clear Fork (km 135-202),MRR
+COWS,JDA,Cowlitz Salmon Hatchery,MRR
+COWT,JDA,Cowlitz Trout Hatchery,MRR
+CR1,JDA,Chinook River Sea Resources CF,INT
+CRABP,JDA,Crab Creek Acclimation Pond,MRR
+CROOK1,JDA,Crooked River - Lake Billy Chinook to Prineville Reservoir (km 0-113),MRR
+CSH,JDA,Cowlitz Salmon Hatchery Ladder,INT
+CUBC,JDA,Cub Creek - Clackamas Subbasin,MRR
+CUNNSL,JDA,Cunningham Slough,MRR
+DBH,JDA,Buck Hollow Ck Deschutes Trib,INT
+DBO,JDA,Bakeoven Ck Deschutes Trib,INT
+DEEPR,JDA,"Deep River, tributary to Columbia River",MRR
+DESCH1,JDA,Deschutes River - mouth to Round Butte Dam (0-177 km),MRR
+DESCH2,JDA,Deschutes River - Round Butte Dam to headwaters (177-393 km),MRR
+DET,JDA,"Detroit Dam (USACE), North Santiam River",MRR
+DETFBY,JDA,DET - Release into the Forebay within 0.5 km upstream of Dam,MRR
+DETTAL,JDA,DET - Release into the Tailrace within 0.5km downstream of Dam,MRR
+DEX,JDA,"Dexter Dam (USACE), Middle Fork Willamette River",MRR
+DEXTAL,JDA,DEX - Release into the Tailrace within 0.5km downstream of Dam,MRR
+DILACC,JDA,"Dillacort Creek, Klickitat River",MRR
+DOGRVR,JDA,"Dog River, tributary to EF Hood River (OR)",MRR
+DRANOL,JDA,Drano Lake,MRR
+DRIFTC,JDA,Drift Creek - tributary to Lewis River,MRR
+DRM,JDA,Deschutes River mouth,INT
+DRNP,JDA,"Deep River Net Pens (Deep River, Washington)",MRR
+DRYC,JDA,"Dry Creek, tributary to Fifteenmile Creek",MRR
+DSF,JDA,Deschutes Sherars Falls,INT
+DXP,JDA,Dexter Ponds Fish Ladder,INT
+EAG2NF,JDA,"North Fork Eagle Creek, Clackamas River Basin",MRR
+EAGH,JDA,"Eagle Creek National Fish Hatchery, Clackamas River Basin",MRR
+EAGL2C,JDA,"Eagle Creek, Clackamas River Basin",MRR
+ECH,JDA,Eagle Creek Hatchery Ladder,INT
+ECL,JDA,Eagle Creek Lower Fish Ladder,INT
+EFD,JDA,East Fork Diversion Fishway,INT
+EFHORC,JDA,"East Fork Horse Creek, McKenzie River Basin",MRR
+EIGH2C,JDA,"Eightmile Creek, Fifteenmile Creek Watershed",MRR
+ELRH,JDA,"Elochoman River Hatchery (Elochoman River, Washington)",MRR
+ESANIS,JDA,"East Sand Island, Columbia River",MRR
+FAL,JDA,"Fall Creek Dam (USACE), MF Willamette River",MRR
+FALL2C,JDA,"Fall Creek, MF Willamette River Basin",MRR
+FALTAL,JDA,FAL - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+FID,JDA,"Farmer's Diversion, Hood River",INT
+FIVE2C,JDA,"Fivemile Creek, Fifteen Mile Creek Watershed",MRR
+FOL,JDA,Foster Dam Ladder S Santiam R,INT
+FOS,JDA,Foster Dam Weir,INT
+FOS,JDA,"Foster Dam, South Santiam River",MRR
+FOSFBY,JDA,FOS - Release into the Forebay within 0.5 km upstream of Dam,MRR
+FOSTAL,JDA,FOS - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+FRFH,JDA,Fall River Fish Hatchery,MRR
+GEECR,JDA,"Gee Creek, Washington, lower Columbia River",MRR
+GERMC,JDA,"Germany Creek, Lower Columbia River, Washington",MRR
+GPD,JDA,Green Peter Dam,MRR
+GRAYSR,JDA,"Grays River, Washington, lower Columbia River",MRR
+GREENR,JDA,"Green River, trib. to NF Toutle River",MRR
+GREEPC,JDA,Green Point Creek (tributary to West Fork Hood River),MRR
+HCR,JDA,"Hills Creek Dam, Middle Fork Willamette River",MRR
+HCRFBY,JDA,HCR - Release into the Forebay within 0.5 km upstream of Dam,MRR
+HCRREG,JDA,HCR - Release into the Regulating Channel of the Tailrace within 0.5 km of Dam,MRR
+HCRTUR,JDA,HCR - Release into the Turbine Channel of the Tailrace within 0.5 km of Dam,MRR
+HERMAC,JDA,"Herman Creek, Columbia River Gorge (OR)",MRR
+HLK,JDA,"Hemlock Dam, Wind River (WA) watershed",MRR
+HLKTAL,JDA,HLK - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+HLX,JDA,Hemlock Dam Fish Ladder Exp.,INT
+HOODEF,JDA,East Fork Hood River,MRR
+HOODMF,JDA,Middle Fork Hood River,MRR
+HOODR,JDA,Hood River,MRR
+HOODWF,JDA,West Fork Hood River,MRR
+HORS2C,JDA,"Horse Creek, upper McKenzie River Basin",MRR
+HRM,JDA,Hood River Mouth,INT
+JDA,JDA,John Day Dam,MRR
+JDABYP,JDA,JDA - Release into the Facility Bypass Flume/Pipe,MRR
+JDACOL,JDA,JDA - Release into the Collection Channel upstream of the Dewatering Facility,MRR
+JDAFBY,JDA,JDA - Release into the Forebay within 0.5 km upstream of Dam,MRR
+JDAGAT,JDA,JDA - Release into Flume between Separator Exit and the Primary PIT-Tag Diversion Gate,MRR
+JDAGWL,JDA,JDA - Release into Gatewell(s),MRR
+JDALD1,JDA,JDA - Release into south fish ladder,MRR
+JDALD2,JDA,JDA - Release into north fish ladder,MRR
+JDAMRT,JDA,JDA - Mortality Recovery,MRR
+JDARRR,JDA,JDA - Release below the PIT-Tag Diversion System Gate with subsequent Return to the River at the Facility,MRR
+JDATAL,JDA,JDA - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+JDJ,JDA,John Day Dam Juvenile,INT
+JDPI,JDA,Preacher's Island downstream of John Day Dam,MRR
+JNSCAS,JDA,"Jones Creek Acc. Site, WF Hood River",MRR
+JO1,JDA,John Day South Fish Ladder,INT
+JO2,JDA,John Day North Fish Ladder,INT
+KALA,JDA,"Kalama Falls Hatchery, WDFW",MRR
+KALAMR,JDA,Kalama River,MRR
+KLICKR,JDA,Klickitat River,MRR
+KLIH,JDA,Klickitat Hatchery,MRR
+KLR,JDA,Klickitat Riv. Floating Array,INT
+LAKE2C,JDA,"Lake Creek, Metolius River watershed",MRR
+LAKEBR,JDA,Lake Branch (tributary to West Fork Hood River),MRR
+LASTC,JDA,Last Creek - Clackamas Subbasin,MRR
+LAURLK,JDA,Laurance Lake Reservoir,MRR
+LD1,JDA,Lebanon Dam South Ladder,INT
+LD2,JDA,Lebanon Dam North Ladder,INT
+LD3,JDA,Lebanon Dam Diversion Bypass,INT
+LD4,JDA,Lebanon Dam Spillway,INT
+LEA,JDA,Leaburg Dam Combined Fishways,INT
+LEA,JDA,Leaburg Dam,MRR
+LEAB,JDA,Leaburg Hatchery,MRR
+LEABYP,JDA,LEA - Release into the Facility Bypass Flume/Pipe,MRR
+LEAFBY,JDA,LEA - Release into the Forebay within 0.5 km upstream of Dam,MRR
+LEATAL,JDA,LEA - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+LEB,JDA,Lebanon Dam,MRR
+LEBFBY,JDA,LEB - Release into the Forebay within 0.5 km upstream of Dam,MRR
+LEBLDS,JDA,LEB - Release into the south ladder trap.,MRR
+LEL,JDA,Leaburg Dam Fish Ladders,INT
+LEWCLK,JDA,"Lewis and Clark River, tributary to Youngs Bay",MRR
+LEWH,JDA,Lewis River Hatchery,MRR
+LEWIEF,JDA,East Fork Lewis River,MRR
+LEWISP,JDA,Lewis River Release Pond,MRR
+LEWISR,JDA,Lewis River,MRR
+LFF,JDA,Lyle Falls Fishway,INT
+LILYSL,JDA,"Lily Slough, Lower Columbia",MRR
+LKLICR,JDA,Little Klickitat River,MRR
+LKR,JDA,Little Klickitat River Array,INT
+LMEMIS,JDA,"Little Memaloose Island, Columbia River",MRR
+LMILIS,JDA,"Little Miller Island, Columbia River",MRR
+LNSANR,JDA,Little North Santiam River,MRR
+LOGCC,JDA,"Logging Camp Creek, Klickitat River",MRR
+LOP,JDA,"Lookout Point Dam (USACE), MF Willamette River",MRR
+LOPTAL,JDA,LOP - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+LRH,JDA,Lewis River Hatchery Returns,INT
+LWL,JDA,Ltl. White Salmon NFH returns,INT
+LWSALR,JDA,Little White Salmon River,MRR
+LWSH,JDA,Little White Salmon National Fish Hatchery,MRR
+LYLFAT,JDA,"Lyle Falls Adult Fish Trap, Klickitat River",MRR
+MARI,JDA,Marion Forks Fish Hatchery,MRR
+MARIOC,JDA,"Marion Creek, tributary to North Santiam River",MRR
+MASON,JDA,"Mason Creek, tributary to East Fork Lewis River",MRR
+MCKA2C,JDA,"McKay Creek, Crooked River",MRR
+MCKE,JDA,McKenzie Hatchery,MRR
+MCKER,JDA,McKenzie River,MRR
+MCKESF,JDA,South Fork McKenzie River,MRR
+MEG,JDA,Megler Cr.-Col. R. Estuary,INT
+MEGC,JDA,"Megler Creek, tributary to Columbia River",MRR
+METOLR,JDA,Metolius River,MRR
+MFD,JDA,Mayfield Dam,MRR
+MFDFTF,JDA,Mayfield Dam Entrance to Counting House Raceways,MRR
+MFDLBN,JDA,Mayfield Dam North Louver Bay,MRR
+MFDLBS,JDA,Mayfield Dam South Louver Bay,MRR
+MFDSEP,JDA,Mayfield Dam Secondary Separator Downwell,MRR
+MHP,JDA,Merwin Hydroeletric Project,INT
+MHP,JDA,Merwin Hydroelectric Project,MRR
+MHPFBY,JDA,MHP - Release into the Forebay within 0.5 km upstream of Dam,MRR
+MHPTAL,JDA,MHP - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+MILL3C,JDA,"Mill Creek, Columbia River at The Dalles, OR",MRR
+MILL4C,JDA,"Mill Creek, Lower Columbia River, Washington",MRR
+MIN,JDA,"Mine Reach of Wind River, WA",INT
+MINTO,JDA,Minto Fish Facility,MRR
+MLAK2C,JDA,"Middle Fork Lake Creek, Metolius River watershed",MRR
+MLRSNI,JDA,"Miller Sands Island, Columbia River Estuary",MRR
+MOLALR,JDA,Molalla River,MRR
+MOLRNF,JDA,North Fork Molalla River,MRR
+MSANTR,JDA,"Middle Santiam River, Oregon",MRR
+MSLA2C,JDA,"Middle Fk South Fk Lake Creek, Metolius River watershed",MRR
+MTD,JDA,Mill Creek at The Dalles,INT
+MUDDYP,JDA,Muddy River Acclimation Pond,MRR
+MUDDYR,JDA,Muddy River - tributary to Lewis River,MRR
+MULTCH,JDA,"Multnomah Channel, Columbia River",MRR
+MULTMA,JDA,"Multnomah Channel Marsh, Lower Wilamette",MRR
+MVF,JDA,Moving Falls Fish Ladder,INT
+MVFLAP,JDA,"Moving Falls Acc. Ponds, WF Hood River",MRR
+NEALC,JDA,"Neal Creek, tributary to Hood River (OR)",MRR
+NSANTR,JDA,"North Santiam River, Oregon",MRR
+NSB,JDA,N Santiam at Upper Bennett Dam,INT
+NSCAPC,JDA,North Scappoose Creek,MRR
+NSM,JDA,Minto Dam Ladder N Santiam R,INT
+NSS,JDA,North Santiam at Stayton Canal,INT
+OCHOCC,JDA,"Ochoco Creek, Crooked River",MRR
+ONTAC,JDA,"Oneonta Creek, Lower Columbia",MRR
+PANT2C,JDA,"Panther Creek (trib. to Wind River, Wash.)",MRR
+PARK,JDA,Parkdale Hatchery,MRR
+PD6,JDA,Columbia River Estuary rkm 68,INT
+PD7,JDA,Columbia River Estuary rkm 70,INT
+PEL,JDA,Pelton Dam Ladder - Deschutes,INT
+PELTON,JDA,Pelton Ladder (Deschutes River) Acclimation Pond,MRR
+PER,JDA,Pelton Reregulating Dam,MRR
+PERAFT,JDA,PER - Adult Fish Trap,MRR
+PERTAL,JDA,PER - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+PIER3,JDA,"Pier 3 boat yard, Port of Astoria, OR ",MRR
+PINHC,JDA,Pinhead Creek - Clackamas Subbasin,MRR
+PWD,JDA,"Powerdale Dam, Hood River",MRR
+PWDFBY,JDA,PWD - Release into the Forebay within 0.5 km upstream of Dam,MRR
+RAMSYC,JDA,"Ramsey Creek, Fifteen Mile Creek Watershed",MRR
+RATTLC,JDA,Rattlesnake Creek,MRR
+RBF,JDA,Round Butte Fish Xfer Facility,INT
+RCX,JDA,Rattlesnake Creek Flat Plates,INT
+RGRSPC,JDA,"Roger's Spring Creek, Middle Fork Hood River",MRR
+RICEIS,JDA,Rice Island,MRR
+ROCKC,JDA,"Rock Creek, tributary to East Fork Lewis River",MRR
+ROU,JDA,Round Butte Dam,MRR
+ROUFTF,JDA,ROU - Release into the Fish Transfer Facility,MRR
+ROUTAL,JDA,ROU - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+RSSNIS,JDA,"Russian Island, Columbia River Estuary",MRR
+SANTIR,JDA,"Santiam River, Oregon",MRR
+SBSLMA,JDA,"Steamboat Slough Marsh, Lower Columbia",MRR
+SCAPPB,JDA,"Scappoose Bay, Oregon",MRR
+SCAPPC,JDA,Scappoose Creek,MRR
+SCHAFC,JDA,"Schafer Creek, Klickitat River Basin",MRR
+SCL,JDA,Spring Creek NFH Adult Ladder,INT
+SERH,JDA,"Sea Resources Hatchery (Chinook River, Washington)",MRR
+SFL,JDA,Shipherd Falls Ladder,INT
+SHERFT,JDA,"Sherars Falls Fishway Trap, Deschutes River",MRR
+SHK,JDA,Shitike Creek PIT Array,INT
+SHP,JDA,Swift Hydroelectric Project,INT
+SHP,JDA,Swift Hydroelectric Project,MRR
+SHPFBY,JDA,SHP - Release into the Forebay within 0.5 km upstream of Dam,MRR
+SHPTAL,JDA,SHP - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+SHTIKC,JDA,"Shitike Creek, Deschutes River Basin",MRR
+SID,JDA,Sauvie Island Dairy Creek,INT
+SKAM,JDA,"Skamania Hatchery, WDFW",MRR
+SKIPAR,JDA,Skipanon River,MRR
+SKIPAW,JDA,Skipanon Waterway,MRR
+SND,JDA,Sandtrap Acclimation Site,INT
+SNDTAP,JDA,"Sandtrap Acc. Ponds, EF Hood River",MRR
+SNYDEC,JDA,"Snyder Creek, Klickitat River",MRR
+SPRC,JDA,Spring Creek National Fish Hatchery,MRR
+SSANTR,JDA,"South Santiam River, Oregon",MRR
+SUC,JDA,"Summit Creek, Klickitat",INT
+SUJ,JDA,Sullivan Dam Juvenile,INT
+SUL,JDA,"Sullivan Hydroelectric Plant, Willamette Falls",MRR
+SULBPS,JDA,SUL - Release into the PIT-Tag Diversion System between the Diversion Gate and the furthest downstream PIT-Tag Detector,MRR
+SULBYP,JDA,SUL - Release into the Facility Bypass Flume/Pipe,MRR
+SULFBY,JDA,SUL - Release into the Forebay within 0.5 km upstream of Dam,MRR
+SULFDS,JDA,SUL - Release above the Fish Diversion Screen,MRR
+SULSEP,JDA,SUL - Release into the Flume downsteam of the Collection/Bypass Gate or into the Separator,MRR
+SULTRB,JDA,SUL - Release into Turbine(s),MRR
+SUMI3C,JDA,"Summit Creek, Klickitat River Basin",MRR
+SWALEC,JDA,Swale Creek - tributary to Klickitat River,MRR
+SWC,JDA,Swale Creek Array,INT
+SYC,JDA,Snyder Creek PIT Tag Array,INT
+TANNEC,JDA,"Tanner Creek, Columbia River below Bonneville Dam",MRR
+TBRKFK,JDA,"Table Rock Fork, tributary to Molalla River",MRR
+TC4,JDA,Trout Creek at 43 Road Bridge,INT
+TCM,JDA,Tryon Creek Mouth,INT
+TD1,JDA,The Dalles East Fish Ladder,INT
+TD2,JDA,The Dalles North Fish Ladder,INT
+TDA,JDA,The Dalles Dam,MRR
+TDAICE,JDA,TDA - Release into the Ice/Trash Sluiceway,MRR
+TDAMRT,JDA,TDA - Mortality Recovery,MRR
+TDASPF,JDA,TDA - Release into the Forebay within 0.5 km upstream of Spillway,MRR
+TDASPL,JDA,TDA - Release directly into Spill Bay(s),MRR
+TDASPT,JDA,TDA - Release into the Tailrace within 0.5 km downstream of Spillway,MRR
+TDATAL,JDA,TDA - Release into the Tailrace within 0.5 km downstream of Dam,MRR
+TDATRB,JDA,TDA - Release into Turbine(s),MRR
+TDBPAT,JDA,BPA towers in The Dalles Dam forebay,MRR
+TDLPI,JDA,Lone Pine Island and associated unnamed islands near The Dalles Dam,MRR
+TDTMI,JDA,Three Mile Island group near The Dalles Dam,MRR
+TENNAI,JDA,"Tenasillahe Island, lower Columbia River",MRR
+TEPEEC,JDA,"Tepee Creek, Klickitat River Basin",MRR
+TEPEEF,JDA,"East Fork Tepee Creek, Klickitat River Basin",MRR
+TOUT,JDA,"North Toutle Hatchery, WDFW",MRR
+TOUTLR,JDA,Toutle River,MRR
+TOUTNF,JDA,North Fork Toutle River,MRR
+TR1,JDA,Lower Trout Cr - Deschutes,INT
+TR2,JDA,Trout/Antelope Cr - Deschutes,INT
+TRA,JDA,Trout Creek Auxillary Site,INT
+TRC,JDA,"Trout Creek, Wind River",INT
+TROU2C,JDA,"Trout Creek, Deschutes River Watershed",MRR
+TROUTC,JDA,"Trout Creek (trib. to Wind River, Wash.)",MRR
+TRYOC,JDA,"Tryon Creek, tributary to Willamette River",MRR
+TSUGCR,JDA,"Tusgawa Creek, tributary to Mason Creek",MRR
+TTOWER,JDA,"Transmission towers near Troutdale, OR",MRR
+TURNCR,JDA,"Turner Creek, tributary to Coweeman River",MRR
+TWX,JDA,Estuary Towed Array (Exp.),INT
+VIENTC,JDA,"Viento Creek, Columbia River Gorge (OR)",MRR
+WAHA,JDA,"Washougal Hatchery, WDFW",MRR
+WALLIS,JDA,"Wallace Island, lower Columbia River near Clatskanie, OR",MRR
+WARMSR,JDA,"Warm Springs River, Deschutes River Watershed",MRR
+WASHOR,JDA,Washougal River,MRR
+WASHWF,JDA,West Fork Washougal River,MRR
+WFF,JDA,Willamette Falls Fishway,INT
+WHC,JDA,"Lwr White Creek, Klickitat Bsn",INT
+WHEELC,JDA,"Wheeler Canyon, tributary to Klickitat River",MRR
+WHITEC,JDA,"White Creek, Klickitat River Basin",MRR
+WHITSR,JDA,White Salmon River,MRR
+WHITWF,JDA,"West Fork White Creek, Klickitat River Basin",MRR
+WILL,JDA,Willard National Fish Hatchery,MRR
+WILLR,JDA,Willamette River (Archaic - replaced with reach-specific definitions),MRR
+WILLR1,JDA,Willamette River - mouth to Willamette Falls (km 0-43),MRR
+WILLR2,JDA,Willamette River - Willamette Falls to Santiam River (km 43-175),MRR
+WILLR3,JDA,Willamette River - Santiam River to the confluence of the Middle and Coast forks of the Willamette River (km 175-301),MRR
+WILRMF,JDA,Middle Fork Willamette River,MRR
+WIND2R,JDA,"Wind River, Washington",MRR
+WLCHIS,JDA,"Welch Island, Lower Columbia",MRR
+WLT,JDA,Walterville Fish Bypass Exit,INT
+WOODIS,JDA,"Woody Island, Columbia River Estuary",MRR
+WRA,JDA,Upper Wind River Auxillary,INT
+WRNFMF,JDA,"North Fork, Middle Fork Willamette River",MRR
+WRP,JDA,Woodland Release Ponds,INT
+WRU,JDA,Upper Wind River (WA) rkm 30,INT
+WSH,JDA,Warm Springs Hatchery,INT
+WSPH,JDA,Warm Springs National Fish Hatchery,MRR
+WSR,JDA,Warm Springs River PIT Array,INT
+WYCHUC,JDA,"Wychus Creek, Upper Deschutes River Basin",MRR
+WZDF,JDA,"Wizard Falls Hatchery, ODFW",MRR
+YOUNGB,JDA,"Youngs Bay, tributary to the Columbia River",MRR
+JOH,JOH,Johnson Creek,INT
+LBC,LBCA0,"Libby Creek, Methow River",INT
+LBC,LBCB0,"Libby Creek, Methow River",INT
+LLC,LLCA0,Loup Loup Creek Instream Array,INT
+LLC,LLCB0,Loup Loup Creek Instream Array,INT
+LMR,LMRA0,Lower Methow River at Pateros,INT
+LMR,LMRB0,Lower Methow River at Pateros,INT
+LEAV,LNFA0,Leavenworth National Fish Hatchery,MRR
+LNF,LNFA0,Leavenworth NFH Adult Ladder,INT
+LNF,LNFB0,Leavenworth NFH Adult Ladder,INT
+DRY,LWEA0,"Dryden Diversion Dam, Wenatchee River",MRR
+LWE,LWEA0,Lower Wenatchee River,INT
+LWE,LWEB0,Lower Wenatchee River,INT
+LWENAT,LWNA0,Little Wenatchee River,MRR
+LWN,LWNA0,Little Wenatchee River,INT
+LWN,LWNB0,Little Wenatchee River,INT
+MAD,MADA0,"Mad River, Entiat River Basin",INT
+MAD,MADB0,"Mad River, Entiat River Basin",INT
+MCL,MCLA0,Lower Mission Creek Instream,INT
+MCL,MCLB0,Lower Mission Creek Instream,INT
+MDR,MDRB0,McDonald Road Bridge,INT
+METH,METHA0,Methow Hatchery,MRR
+MSH,METHB0,Methow Fish Hatchery Outfall,INT
+MRC,MRCB0,Methow River at Carlton,INT
+MRW,MRWA0,Methow River at Winthrop,INT
+MRW,MRWB0,Methow River at Winthrop,INT
+MSH,MSHA0,Methow Fish Hatchery Outfall,INT
+MSH,MSHB0,Methow Fish Hatchery Outfall,INT
+"NAL","NALA0",Lower Nason Creek,INT
+"NASONC","NALA0",Nason Creek (tributary to Wenatchee River),MRR
+"NAL","NALB0",Lower Nason Creek,INT
+"NAU","NAUA0",Upper Nason Creek,INT
+"NAU","NAUB0",Upper Nason Creek,INT
+NMC,NMCA0,Ninemile Creek Instream Array,INT
+NMC,NMCB0,Ninemile Creek Instream Array,INT
+OBF,OBF,Omak Creek below Mission Falls,INT
+OKC,OKCA0,Okanagan Channel at VDS-3,INT
+OKC,OKCB0,Okanagan Channel at VDS-3,INT
+OKI,OKIA0,Inkaneep Creek ,INT
+OKI,OKIB0,Inkaneep Creek ,INT
+OKL,OKLA0,Lower Okanogan Instream Array,INT
+OKL,OKLB0,Lower Okanogan Instream Array,INT
+OKM,OKM,McIntyre Dam,INT
+OKP,OKP,Penticton Channel PIT Array,INT
+OKS,OKSA0,Shingle Creek,INT
+OKS,OKSB0,Shingle Creek,INT
+OKV,OKVA0,"Vasuex Creek, BC, Canada",INT
+OKV,OKVB0,"Vasuex Creek, BC, Canada",INT
+OKW,OKWA0,Shuttleworth Creek,INT
+OKW,OKWB0,Shuttleworth Creek,INT
+OMF,OMFA0,Omak Creek above Mission Falls,INT
+OMF,OMFB0,Omak Creek above Mission Falls,INT
+OMH,OMH,Omak Creek Haley Creek Road,INT
+OMK,OMKA0,Omak Creek Instream Array,INT
+OMK,OMKB0,Omak Creek Instream Array,INT
+PES,PESA0,Peshastin Creek,INT
+PES,PESB0,Peshastin Creek,INT
+PEU,PEUA0,Upper Peshastin Creek,INT
+PEU,PEUB0,Upper Peshastin Creek,INT
+PRA,PRA,Priest Rapids Adult,INT
+PRDLD1,PRA,PRD - Release into the Left Bank (facing downstream) Adult Fish Ladder,MRR
+PRH,PRHA0,Priest Rapids Hatchery Outfall,INT
+PRH,PRHB0,Priest Rapids Hatchery Outfall,INT
+PRO,PROB0,Prosser Diversion Dam Combined,INT
+PRV,PRV,Walla Walla R at Pierce RV Prk,INT
+RCT,RCTA0,Roaring Creek Temporary Array,INT
+RCT,RCTB0,Roaring Creek Temporary Array,INT
+RIA,RIA,Rock Island Adult,INT
+RRF,RRF,Rocky Reach Fishway,INT
+RRJ,RRF,Rocky Reach Dam Juvenile,INT
+RSH,RSHA0,Ringold Springs Hatch. Outfall,INT
+RSH,RSHB0,Ringold Springs Hatch. Outfall,INT
+SA0,SA0A0,Salmon Creek below OID Div.,INT
+SA0,SA0B0,Salmon Creek below OID Div.,INT
+SA1,SA1A0,Salmon Creek Instream Array,INT
+SA1,SA1B0,Salmon Creek Instream Array,INT
+SCP,SCPA0,Spring Creek Acclimation Pond,INT
+SCP,SCPB0,Spring Creek Acclimation Pond,INT
+SKA,SKAA0,Skaha Dam Fish Ladder,INT
+SKA,SKAB0,Skaha Dam Fish Ladder,INT
+SKA,SKAB0,Skaha Dam,MRR
+TMF,TMF,Three Mile Falls Dam Combined,INT
+TNK,TNK,Tunk Creek Instream Array,INT
+TON,TON,Tonasket Creek,INT
+TUF,TUM,Tumwater Dam Adult Fishway,INT
+TUM,TUM,"Tumwater Dam, Wenatchee River",MRR
+TUMFBY,TUM,TUM - Release into the Forebay within 0.5 km upstream of Dam,MRR
+TWISPW,TWISPW,Twisp River Weir (WDFW),MRR
+TWR,TWRA0,Lwr Twisp Rvr near MSRF Ponds,INT
+TWR,TWRB0,Lwr Twisp Rvr near MSRF Ponds,INT
+UWE,UWE,Upper Wenatchee River,INT
+WAN,WAN,Wanacut Creek,INT
+WEA,WEA,"Wells Dam, DCPUD Adult Ladders",INT
+WEH,WEHA0,Wells Dam Hatchery,INT
+WEH,WEHB0,Wells Dam Hatchery,INT
+WFC,WFC,"Wolf Creek, Methow River",INT
+WHS,WHS,Wildhorse Spring Creek,INT
+WHITER,WTLA0,"White River, Wenatchee River Basin",MRR
+WTL,WTLA0,"White River, Wenatchee Basin",INT
+WTL,WTLB0,"White River, Wenatchee Basin",INT
+ZSL,ZSLA0,Zosel Dam Combined,INT
+ZSL,ZSLB0,Zosel Dam Combined,INT
