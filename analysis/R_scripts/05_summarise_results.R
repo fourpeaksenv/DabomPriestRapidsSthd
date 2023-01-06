@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: summarize DABOM results
 # Created: 4/1/20
-# Last Modified: 6/15/2022
+# Last Modified: 11/30/2022
 # Notes:
 
 #-----------------------------------------------------------------
@@ -10,6 +10,7 @@ library(DABOM)
 library(PITcleanr)
 library(tidyverse)
 library(magrittr)
+library(janitor)
 library(readxl)
 library(STADEM)
 library(writexl)
@@ -26,7 +27,7 @@ load(here('analysis/data/derived_data',
 
 #-----------------------------------------------------------------
 # set year
-yr = 2021
+yr = 2022
 
 # what dam count to use?
 dam_cnt_name = c("PriestRapids",
@@ -35,9 +36,16 @@ dam_cnt_name = c("PriestRapids",
 
 #-----------------------------------------------------------------
 # run for set of years
-for(yr in 2011:2021) {
+for(yr in 2011:2022) {
 
   cat(paste("Working on", yr, "\n\n"))
+
+  #   if(yr %in% c(2011:2015, 2018)) {
+  #     dam_cnt_name == "PriestRapids"
+  #   } else {
+  #     dam_cnt_name == "RockIsland"
+  #   }
+
 
   # load compressed detections and biological data
   load(here('analysis/data/derived_data/PITcleanr',
@@ -193,22 +201,22 @@ for(yr in 2011:2021) {
 
   # get the total dam counts from various dams
   dam_escp_df = tibble(year = yr,
-                       dam = c("PriestRapids",
-                               "RockIsland",
-                               "RockyReach"),
+                       dam = as_factor(c("PriestRapids",
+                                         "RockIsland")),
+                       # "RockyReach"),
                        dam_code = c("PRD",
-                                    "RIS",
-                                    "RRH"),
+                                    "RIS"),
+                       # "RRH"),
                        pit_code = c("PRA",
-                                    "RIA",
-                                    "RRF")) %>%
+                                    "RIA")) %>%
+                                    # "RRF")) %>%
     rowwise() %>%
     mutate(win_cnt = map_dbl(dam_code,
                              .f = function(x) {
-                               STADEM::getWindowCounts(dam = x,
+                               suppressMessages(STADEM::getWindowCounts(dam = x,
                                                        spp = "Steelhead",
                                                        start_date = start_date,
-                                                       end_date = end_date) %>%
+                                                       end_date = end_date)) %>%
                                  summarise_at(vars(win_cnt),
                                               list(sum),
                                               na.rm = T) %>%
@@ -217,12 +225,16 @@ for(yr in 2011:2021) {
     # add re-ascension data
     mutate(reasc_df = map(pit_code,
                           .f = function(x) {
-                            dart_df = try(queryPITtagData(damPIT = x,
-                                                          spp = "Steelhead",
-                                                          start_date = start_date,
-                                                          end_date = end_date))
+                            dart_df = try(suppressMessages(queryPITtagData(damPIT = x,
+                                                                           spp = "Steelhead",
+                                                                           start_date = start_date,
+                                                                           end_date = end_date)))
                             if(class(dart_df)[1] == "try-error") {
-                              return(NA)
+                              # return(NA)
+                              tibble(origin = c("H", "W"),
+                                     tot_tags = NA,
+                                     reascent_tags = NA) %>%
+                                return()
                             } else {
                               dart_df %>%
                                 filter(!str_detect(TagId, "000.0")) %>%
@@ -233,11 +245,16 @@ for(yr in 2011:2021) {
                                               tidyr::replace_na,
                                               0)) %>%
                                 mutate(ReAscent = ifelse(TagIdAscentCount > 1, T, F)) %>%
-                                group_by(Species, SpawnYear, Date) %>%
+                                filter(RearType %in% c("H", "W")) %>%
+                                group_by(Species,
+                                         origin = RearType,
+                                         SpawnYear, Date) %>%
                                 summarise(tot_tags = n_distinct(TagId),
                                           reascent_tags = n_distinct(TagId[ReAscent]),
                                           .groups = "drop") %>%
-                                group_by(Species, SpawnYear) %>%
+                                group_by(Species,
+                                         origin,
+                                         SpawnYear) %>%
                                 summarise(across(matches('tags'),
                                                  sum,
                                                  na.rm = T),
@@ -251,13 +268,19 @@ for(yr in 2011:2021) {
                           })) %>%
     unnest(reasc_df) %>%
     # if no re-ascension data, use Priest Rapids
+    arrange(year,
+            origin,
+            dam) %>%
     fill(reasc_rate,
          reasc_rate_se,
          .direction = "down") %>%
+    arrange(year,
+            dam,
+            origin) %>%
     # adjust for re-ascension
     mutate(adj_win_cnt = win_cnt * (1 - reasc_rate),
            adj_win_cnt_se = win_cnt * reasc_rate_se) %>%
-    crossing(origin = c("W", "H")) %>%
+    # crossing(origin = c("W", "H")) %>%
     # break down hatchery and wild based on upstream tags
     mutate(n_obs = map2_int(pit_code,
                             origin,
@@ -317,57 +340,100 @@ for(yr in 2011:2021) {
                                                          trans_se)^2))) %>%
     ungroup()
 
-  org_escape <- dam_escp_df %>%
-    filter(dam == dam_cnt_name) %>%
-    mutate(Species = "Steelhead") %>%
-    select(Species,
-           SpawnYear = year,
-           origin,
-           reasc_rate,
-           tot_escp = priest_cnt,
-           tot_escp_se = priest_cnt_se)
+
+  for(dam_cnt_name in c("PriestRapids",
+                        "RockIsland")) {
+
+    cat(paste("\t Using", dam_cnt_name, " dam \n\n"))
+
+    org_escape <- dam_escp_df %>%
+      filter(dam == dam_cnt_name) %>%
+      mutate(Species = "Steelhead") %>%
+      select(Species,
+             SpawnYear = year,
+             dam,
+             origin,
+             reasc_rate,
+             tot_escp = priest_cnt,
+             tot_escp_se = priest_cnt_se)
 
 
-  # translate movement estimates to escapement
-  escape_post = trans_df %>%
-    left_join(org_escape %>%
-                group_by(origin) %>%
-                summarise(tot_esc_samp = map2(tot_escp,
-                                              tot_escp_se,
-                                              .f = function(x, y) {
-                                                tibble(tot_escp = rnorm(max(trans_df$iter),
-                                                                        mean = x,
-                                                                        sd = y)) %>%
-                                                  mutate(iter = 1:n())
-                                              })) %>%
-                unnest(cols = tot_esc_samp)) %>%
-    mutate(escp = value * tot_escp)
+    # translate movement estimates to escapement
+    escape_post = trans_df %>%
+      left_join(org_escape %>%
+                  group_by(origin) %>%
+                  summarise(tot_esc_samp = map2(tot_escp,
+                                                tot_escp_se,
+                                                .f = function(x, y) {
+                                                  tibble(tot_escp = rnorm(max(trans_df$iter),
+                                                                          mean = x,
+                                                                          sd = y)) %>%
+                                                    mutate(iter = 1:n())
+                                                })) %>%
+                  unnest(cols = tot_esc_samp)) %>%
+      mutate(escp = value * tot_escp)
 
-  escape_summ = escape_post %>%
-    group_by(origin, location = param) %>%
-    summarise(mean = mean(escp),
-              median = median(escp),
-              mode = estMode(escp),
-              sd = sd(escp),
-              skew = moments::skewness(escp),
-              kurtosis = moments::kurtosis(escp),
-              lowerCI = coda::HPDinterval(coda::as.mcmc(escp))[,1],
-              upperCI = coda::HPDinterval(coda::as.mcmc(escp))[,2],
-              .groups = 'drop') %>%
-    mutate(across(c(mean, median, mode, sd, matches('CI$')),
-                  ~ if_else(. < 0, 0, .))) %>%
-    mutate(across(c(mean, median, mode, sd, skew, kurtosis, matches('CI$')),
-                  round,
-                  digits = 2)) %>%
-    arrange(desc(origin), location) %>%
-    tibble::add_column(species = "Steelhead",
-                       spawn_year = yr,
-                       .before = 0)
+    escape_summ = escape_post %>%
+      group_by(origin, location = param) %>%
+      summarise(mean = mean(escp),
+                median = median(escp),
+                mode = estMode(escp),
+                sd = sd(escp),
+                skew = moments::skewness(escp),
+                kurtosis = moments::kurtosis(escp),
+                lowerCI = coda::HPDinterval(coda::as.mcmc(escp))[,1],
+                upperCI = coda::HPDinterval(coda::as.mcmc(escp))[,2],
+                .groups = 'drop') %>%
+      mutate(across(c(mean, median, mode, sd, matches('CI$')),
+                    ~ if_else(. < 0, 0, .))) %>%
+      mutate(across(c(mean, median, mode, sd, skew, kurtosis, matches('CI$')),
+                    round,
+                    digits = 2)) %>%
+      arrange(desc(origin), location) %>%
+      tibble::add_column(species = "Steelhead",
+                         spawn_year = yr,
+                         .before = 0)
+
+    #-----------------------------------------------------------------
+    # save some of these objects
+    save(tag_summ,
+         bio_df,
+         trans_df,
+         trans_summ,
+         dam_escp_df,
+         org_escape,
+         escape_post,
+         escape_summ,
+         detect_summ,
+         configuration,
+         flowlines,
+         parent_child,
+         sites_sf,
+         file = here("analysis/data/derived_data/estimates",
+                     dam_cnt_name,
+                     paste0("UC_Sthd_DABOM_", yr, ".rda")))
+  }
+}
+
+#-----------------------------------------------------------------
+# create some summaries of biological information
+
+#-----------------------------------------------------------------
+# run for set of years
+for(yr in 2011:2022) {
+
+  cat(paste("Summarizing year", yr, "\n\n"))
+
+  if(yr %in% c(2011:2015, 2018)) {
+    dam_cnt_name = "PriestRapids"
+  } else {
+    dam_cnt_name = "RockIsland"
+  }
 
 
-
-  #-----------------------------------------------------------------
-  # create some summaries of biological information
+  load(here("analysis/data/derived_data/estimates",
+            dam_cnt_name,
+            paste0("UC_Sthd_DABOM_", yr, ".rda")))
 
   bio_summ = tag_summ %>%
     group_by(group,
@@ -398,8 +464,7 @@ for(yr in 2011:2021) {
                         'ENL',
                         'LMR',
                         'OKL',
-                        'ICH', 'JD1', 'JDA', 'PRH', 'PRO', 'PRV', 'RSH', 'TMF',
-                        'WEA_bb')) %>%
+                        'ICH', 'JD1', 'JDA', 'PRH', 'PRO', 'PRV', 'RSH', 'TMF')) %>%
     mutate(param = recode(param,
                           'LWE' = 'Wenatchee',
                           'ENL' = 'Entiat',
@@ -412,10 +477,13 @@ for(yr in 2011:2021) {
                           'PRO' = 'BelowPriest',
                           'PRV' = 'BelowPriest',
                           'RSH' = 'BelowPriest',
-                          'TMF' = 'BelowPriest',
-                          'WEA_bb' = "WellsPool")) %>%
+                          'TMF' = 'BelowPriest')) %>%
     mutate(param = factor(param,
-                          levels = levels(brnch_df$group))) %>%
+                          levels = c("Wenatchee",
+                                     "Entiat",
+                                     "Methow",
+                                     "Okanogan",
+                                     "BelowPriest"))) %>%
     group_by(chain, iter, origin, param) %>%
     summarize(across(escp,
                      sum),
@@ -612,8 +680,9 @@ for(yr in 2011:2021) {
   #------------------------------------------------------------
   # origin proportion based on tags observed in each branch/population
   org_summ = tag_summ %>%
-    filter(!group %in% c("Start",
-                         "Other")) %>%
+    filter(group %in% pop_summ$group) %>%
+    mutate(across(group,
+                  fct_drop)) %>%
     group_by(group, origin) %>%
     summarise(n_tags = n_distinct(tag_code),
               .groups = "drop") %>%
@@ -853,6 +922,95 @@ for(yr in 2011:2021) {
                        'Mark Group Bio Summary' = mark_grp_bio_summ)
 
   #-----------------------------------------------------------------
+  # pull together information about the tag rate at Priest
+  priest_tag_rate <- dam_escp_df |>
+    filter(dam == "PriestRapids") |>
+    mutate(run_year = year - 1) |>
+    select(run_year,
+           spawn_year = year,
+           win_cnt,
+           origin,
+           contains("reasc_rate"),
+           contains("priest_cnt")) |>
+    mutate(total = sum(priest_cnt),
+           total_se = sqrt(sum(priest_cnt_se^2))) |>
+    left_join(bio_df |>
+                group_by(origin) |>
+                summarize(n_tags = n_distinct(tag_code),
+                          .groups = "drop") |>
+                mutate(total_tags = sum(n_tags)),
+              by = "origin") |>
+    mutate(across(origin,
+                  recode,
+                  "H" = "Hatchery",
+                  "W" = "Natural")) |>
+    rlang::set_names(nm = function(x) {
+      x |>
+        str_replace("_", " ") |>
+        str_to_title()
+    }) |>
+    rename(`PRD Ladder Count` = `Win Cnt`,
+           `Adult Reascension Adjustment Rate` = `Reasc Rate`,
+           `Reascension Rate SE` = `Reasc Rate_se`,
+           `Priest Est` = `Priest Cnt`,
+           `Priest SE` = `Priest Cnt_se`,
+           `Total SE` = `Total Se`)
+
+  if(!yr %in% c(2011:2015, 2018)) {
+    priest_tag_rate %<>%
+      left_join(dam_escp_df %>%
+                  filter(dam == "RockIsland") %>%
+                  select(origin,
+                         #contains("reasc_rate"),
+                         contains("priest_cnt"),
+                         dam) %>%
+                  mutate(total = sum(priest_cnt),
+                         total_se = sqrt(sum(priest_cnt_se^2))) %>%
+                  relocate(dam,
+                           .after = "total_se") %>%
+                  mutate(across(origin,
+                                recode,
+                                "H" = "Hatchery",
+                                "W" = "Natural"),
+                         across(dam,
+                                recode,
+                                "RockIsland" = "Rock Island")) %>%
+                  rlang::set_names(nm = function(x) {
+                    x %>%
+                      str_replace("_", " ") %>%
+                      str_to_title()
+                  }) %>%
+                  rename(#`PRD Ladder Count` = `Win Cnt`,
+                    # `Adult Reascension Adjustment Rate` = `Reasc Rate`,
+                    # `Reascension Rate SE` = `Reasc Rate_se`,
+                    `Modelled Priest Est` = `Priest Cnt`,
+                    `Modelled Priest SE` = `Priest Cnt_se`,
+                    `Modelled Total` = Total,
+                    `Modelled Total SE` = `Total Se`,
+                    `Dam Method` = Dam),
+                by = "Origin") %>%
+      relocate(c(`N Tags`,
+                 `Total Tags`),
+               .after = "Dam Method") %>%
+      mutate(`Tag Rate` = if_else(is.na(`Dam Method`),
+                                  `N Tags` / `Priest Est`,
+                                  `N Tags` / `Modelled Priest Est`),
+             `Total Tag Rate` = if_else(is.na(`Dam Method`),
+                                        `Total Tags` / Total,
+                                        `Total Tags` / `Modelled Total`))
+  } else {
+    priest_tag_rate %<>%
+      mutate(`Dam Method` = "Priest Rapids") %>%
+      relocate(c(`N Tags`,
+                 `Total Tags`),
+               .after = "Dam Method") %>%
+      mutate(`Tag Rate` = `N Tags` / `Priest Est`,
+             `Total Tag Rate` = `Total Tags` / Total)
+  }
+
+
+
+  #-----------------------------------------------------------------
   # write results to an Excel file
   save_list = c(list('Population Escapement' = pop_summ %>%
                        select(-skew, -kurtosis) %>%
@@ -881,32 +1039,48 @@ for(yr in 2011:2021) {
                        rename(estimate = mean,
                               se = sd) %>%
                        select(-median, -mode),
-                     'Tag Summary' = tag_summ),
+                     'Tag Summary' = tag_summ,
+                     "Priest Rapids Escapement" = priest_tag_rate |>
+                       mutate(across(ends_with("Year"),
+                                     as.integer)) |>
+                       mutate(across(c("PRD Ladder Count",
+                                       ends_with("Priest Est"),
+                                       ends_with("Total")),
+                                     ~ as.integer(round_half_up(.)))) |>
+                       mutate(across(where(is.double),
+                                     round,
+                                     digits = 3))),
                 bio_list,
                 mark_grp_list)
 
-  # save results to be accessed later
-  save(save_list,
-       detect_summ,
-       trans_summ,
-       escape_summ,
-       pop_summ,
-       dam_cnt_name,
-       dam_escp_df,
-       configuration,
-       flowlines,
-       parent_child,
-       sites_sf,
-       file = here(paste0('analysis/data/derived_data/estimates/', dam_cnt_name),
-                   paste0("PRA_DABOM_Steelhead_", yr, ".rda")))
+  # # save results to be accessed later
+  # save(save_list,
+  #      # detect_summ,
+  #      # trans_summ,
+  #      # escape_summ,
+  #      pop_summ,
+  #      dam_cnt_name,
+  #      # dam_escp_df,
+  #      # configuration,
+  #      # flowlines,
+  #      # parent_child,
+  #      # sites_sf,
+  #      file = here(paste0('analysis/data/derived_data/estimates/', dam_cnt_name),
+  #                  paste0("PRA_DABOM_Steelhead_", yr, ".rda")))
 
   # excel_file_path = if_else(dam_cnt_name == "PriestRapids",
   #                           'outgoing/estimates',
-  #                           paste0('outgoing/estimates/', dam_cnt_name))
+  #                           paste0('outgoing/estimates/', dam_cnt_name, "Cnts"))
   #
   # writexl::write_xlsx(x = save_list,
   #                     path = here(excel_file_path,
   #                                 paste0('UC_Steelhead_', yr, '_', format(Sys.Date(), '%Y%m%d'), '.xlsx')))
+
+  excel_file_path = "T:/DFW-Team FP Upper Columbia Escapement - General/UC_Sthd/Data Requests/"
+
+  writexl::write_xlsx(x = save_list,
+                      path = here(excel_file_path,
+                                  paste0('UC_Steelhead_', yr, '_', format(Sys.Date(), '%Y%m%d'), '4FWS_CCT.xlsx')))
 
 }
 
