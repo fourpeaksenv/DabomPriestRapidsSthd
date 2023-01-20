@@ -74,7 +74,7 @@ spwn_est <- crossing(population = c("Wenatchee",
   filter(file_exists) %>%
   mutate(results_list = map2(file_nm,
                              population,
-                            .f = function(file_name,
+                            .f = possibly(function(file_name,
                                           pop_nm) {
                               load(file_name)
 
@@ -480,7 +480,8 @@ spwn_est <- crossing(population = c("Wenatchee",
                                   return()
                               }
 
-                            })) |>
+                            },
+                            otherwise = NULL))) |>
   select(-file_nm,
          -file_exists)
 
@@ -559,13 +560,14 @@ dabom_est <- crossing(spawn_year = c(2011:2022)) %>%
                                 filter(param %in% c('LWE',
                                                     'ENL',
                                                     'LMR',
-                                                    'OKL',
+                                                    'OKL', 'FST',
                                                     'ICH', 'JD1', 'JDA', 'PRH', 'PRO', 'PRV', 'RSH', 'TMF')) %>%
                                 mutate(param = recode(param,
                                                       'LWE' = 'Wenatchee',
                                                       'ENL' = 'Entiat',
                                                       'LMR' = 'Methow',
                                                       'OKL' = 'Okanogan',
+                                                      'FST' = 'Okanogan',
                                                       'ICH' = 'Below Priest',
                                                       'JD1' = 'Below Priest',
                                                       'JDA' = 'Below Priest',
