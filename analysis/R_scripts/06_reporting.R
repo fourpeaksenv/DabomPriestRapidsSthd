@@ -1,7 +1,7 @@
 # Author: Kevin See
 # Purpose: format results to be saved
 # Created: 11/30/22
-# Last Modified: 1/26/2023
+# Last Modified: 2/3/2023
 # Notes:
 
 #-----------------------------------------------------------------
@@ -10,10 +10,12 @@ library(tidyverse)
 library(UCSthdReddObsErr)
 library(PITcleanr)
 library(janitor)
+library(readxl)
 library(writexl)
 library(magrittr)
 library(msm)
 library(here)
+library(DescTools)
 
 # load age table
 data("age_table")
@@ -1019,7 +1021,8 @@ dabom_est <- crossing(spawn_year = c(2011:max_yr)) %>%
                                 ungroup() |>
                                 select(any_of(names(mark_grp_yr)))
 
-                              res_list <- list(age_prop_yr = age_prop_yr,
+                              res_list <- list(tag_summ = tag_summ,
+                                               age_prop_yr = age_prop_yr,
                                                pop_escp_yr = pop_escp_yr,
                                                escp_yr = escp_yr,
                                                detect_yr = detect_yr,
@@ -1068,6 +1071,25 @@ detect_df <- dabom_est |>
          -all_results) |>
   unnest(res) |>
   makeTableNms()
+
+tag_df <- dabom_est |>
+  mutate(res = map(all_results,
+                   "tag_summ")) |>
+  select(-dam_cnt_name,
+         -all_results) |>
+  unnest(res) |>
+  select(run_year:tag_code,
+         species,
+         record_id,
+         tag_other,
+         sex:age,
+         ad_clip,
+         cwt,
+         trap_date,
+         spawn_node:tag_detects,
+         path) |>
+  makeTableNms()
+
 
 sex_prop <- dabom_est |>
   mutate(res = map(all_results,
@@ -1280,6 +1302,52 @@ dam_cnt_tab <- priest_df |>
 
 
 #-----------------------------------------------------------------
+# pull together estimates of sex call error rates at Priest
+sex_err_rate <- tag_df |>
+  clean_names() |>
+  select(spawn_year,
+         tag_code,
+         sex_field = sex) |>
+  inner_join(read_excel(paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
+                               "UC_Sthd/inputs/Bio Data/",
+                               "Sex and Origin PRD-Brood Comparison Data/",
+                               "STHD UC Brood Collections_2011 to current.xlsx"),
+                        sheet = "Brood Collected_PIT Tagged Only") |>
+               clean_names() |>
+               rename(tag_code = recaptured_pit) |>
+               select(spawn_year,
+                      tag_code,
+                      sex_final),
+             by = c("spawn_year",
+                    "tag_code")) |>
+  filter(!is.na(sex_final),
+         !is.na(sex_field)) |>
+  mutate(agree = if_else(sex_field == sex_final,
+                         T, F)) |>
+  group_by(spawn_year,
+           sex = sex_field) |>
+  summarize(n_tags = n_distinct(tag_code),
+            n_true = sum(agree),
+            n_false = sum(!agree),
+            .groups = "drop") |>
+  mutate(binom_ci = map2(n_false,
+                         n_tags,
+                         .f = function(x, y) {
+                           DescTools::BinomCI(x, y) |>
+                             as_tibble()
+                         })) |>
+  unnest(binom_ci) |>
+  clean_names() |>
+  rename(perc_false = est,
+         lowerci = lwr_ci,
+         upperci = upr_ci) |>
+  mutate(perc_se = sqrt((perc_false * (1 - perc_false)) / n_tags)) |>
+  relocate(perc_se,
+           .after = "perc_false") |>
+  makeTableNms()
+
+
+#-----------------------------------------------------------------
 # put together in a list to save / write to Excel
 # make some decisions about rounding
 save_list <- list(
@@ -1348,6 +1416,10 @@ save_list <- list(
                   round,
                   digits = 3)),
 
+  "Tag Summary" = tag_df |>
+    mutate(across(ends_with("Year"),
+                  as.integer)),
+
   "Run Escp Sex" = sex_prop |>
     mutate(across(ends_with("Year"),
                   as.integer),
@@ -1410,6 +1482,13 @@ save_list <- list(
                   as.integer)) |>
     mutate(across(Estimate,
                   ~ as.integer(round_half_up(.)))) |>
+    mutate(across(where(is.double),
+                  round,
+                  digits = 3)),
+
+  "Sex Error Rates" = sex_err_rate |>
+    mutate(across(ends_with("Year"),
+                  as.integer)) |>
     mutate(across(where(is.double),
                   round,
                   digits = 3))
