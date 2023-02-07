@@ -115,7 +115,7 @@ load(here('analysis/data/derived_data',
 
 ```{r dam-cnts-sthd, cache=TRUE}
 # what years to examine?
-all_yrs = 2011:2021
+all_yrs = 2011:2022
 
 # set species
 spp = "Steelhead"
@@ -132,7 +132,7 @@ dam_cnts = tibble(dam = c("Priest Rapids",
                                "RRH",
                                "WEL",
                                "TUM")) %>%
-  crossing(year = c(all_yrs, 2022, 2023)) %>%
+  crossing(year = unique(c(all_yrs, 2022, 2023))) %>%
   rowwise() %>%
   mutate(win_cnt = map2_dbl(dam_code,
                             year,
@@ -175,7 +175,7 @@ dam_cnts %<>%
 
 ```{r reascension-rates, cache=TRUE}
 # get re-ascension rates for some dams
-reasc_rates <- crossing(year = all_yrs,
+reasc_rates <- crossing(year = sort(unique(dam_cnts$year)),
                         pit_code = c("PRA",
                                      "RIA",
                                      "RRF")) %>%
