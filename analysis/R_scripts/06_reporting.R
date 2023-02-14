@@ -1,13 +1,13 @@
 # Author: Kevin See
 # Purpose: format results to be saved
 # Created: 11/30/22
-# Last Modified: 2/3/2023
+# Last Modified: 2/14/2023
 # Notes:
 
 #-----------------------------------------------------------------
 # load needed libraries
 library(tidyverse)
-library(UCSthdReddObsErr)
+# library(UCSthdReddObsErr)
 library(PITcleanr)
 library(janitor)
 library(readxl)
@@ -16,6 +16,7 @@ library(magrittr)
 library(msm)
 library(here)
 library(DescTools)
+library(sroem)
 
 # load age table
 data("age_table")
@@ -55,8 +56,443 @@ min_redds = 2
 # minimum number of weeks with at least one new redd observed
 min_non0_wks = 3
 
-# redd_spwn = NULL
-# spwn_df = NULL
+
+#-----------------------------------------------------------------
+
+
+# spwn_est <- crossing(population = c("Wenatchee",
+#                                     "Methow"),
+#                      spawn_year = c(2014:max_yr)) %>%
+#   mutate(run_year = spawn_year -1) %>%
+#   select(run_year, spawn_year, population) %>%
+#   mutate(file_nm = map2_chr(population,
+#                             spawn_year,
+#                             .f = function(pop_nm,
+#                                           yr) {
+#                               file_nm = here('O:/Documents/Git/MyProjects/UCSthdReddObsErr/analysis/data/derived_data',
+#                                              paste0(if_else(pop_nm == "Wenatchee",
+#                                                             'wen_',
+#                                                             if_else(pop_nm == "Methow",
+#                                                                     "met_",
+#                                                                     NA_character_)), yr, '.rda'))
+#                               return(file_nm)
+#                             }),
+#          file_exists = map_lgl(file_nm,
+#                                .f = file.exists)) %>%
+#   filter(file_exists) %>%
+#   mutate(results_list = map2(file_nm,
+#                              population,
+#                             .f = possibly(function(file_name,
+#                                           pop_nm) {
+#                               load(file_name)
+#
+#                               # for 2020, we'll need to do something different
+#                               if(str_detect(file_name, "_2020.rda",
+#                                             negate = T)) {
+#
+#                               results_lst <- redd_df |>
+#                                 bind_rows(redds_below_arrays) |>
+#                                 group_by(Index, SurveyType) |>
+#                                 nest(redd_data = -c(Index, SurveyType)) |>
+#                                 filter(!(is.na(Index) & is.na(SurveyType))) |>
+#                                 mutate(summ_lst = map2(redd_data, Index,
+#                                                        .f = function(x, y) {
+#                                                          summarizeRedds(redd_df = x,
+#                                                                         group_vars = c("Reach"),
+#                                                                         summ_vars = c("River",
+#                                                                                       "Location"),
+#                                                                         min_non0_wks = min_non0_wks,
+#                                                                         min_redds = min_redds,
+#                                                                         use_cor = if_else(y == "Y", T, F))
+#                                                        })) |>
+#                                 ungroup()
+#
+#                               redd_results <- results_lst |>
+#                                 mutate(rch_res = map(summ_lst,
+#                                                      "rch_est")) |>
+#                                 select(Index,
+#                                        SurveyType,
+#                                        rch_res) |>
+#                                 unnest(rch_res) |>
+#                                 ungroup() |>
+#                                 mutate(Reach = factor(Reach,
+#                                                       levels = c(paste0('W', 1:10),
+#                                                                  "C1",
+#                                                                  "N1",
+#                                                                  "P1",
+#                                                                  paste0("MRW", 1:8)))) |>
+#                                 arrange(Reach,
+#                                         Index) |>
+#                                 relocate(River, Reach, Location,
+#                                          .before = 1)
+#
+#                               spwn_rch = redd_results |>
+#                                 select(River, Location, Reach, Index, redd_est, redd_se) |>
+#                                 left_join(fpr_df |>
+#                                             select(Location, starts_with('fpr')),
+#                                           by = "Location") |>
+#                                 left_join(fpr_df |>
+#                                             select(Location, starts_with('phos')),
+#                                           by = "Location") |>
+#                                 rowwise() |>
+#                                 mutate(Tot_Spawners = redd_est * fpr,
+#                                        Hatchery = redd_est * fpr * phos,
+#                                        Natural = redd_est * fpr * (1 - phos),
+#                                        Hatchery_SE = ifelse(Tot_Spawners > 0,
+#                                                             deltamethod(~ x1 * x2 * x3,
+#                                                                         mean = c(redd_est, fpr, phos),
+#                                                                         cov = diag(c(redd_se, fpr_se, phos_se)^2)),
+#                                                             NA),
+#                                        Natural_SE = ifelse(Tot_Spawners > 0,
+#                                                            deltamethod(~ x1 * x2 * (1 - x3),
+#                                                                        mean = c(redd_est, fpr, phos),
+#                                                                        cov = diag(c(redd_se, fpr_se, phos_se)^2)),
+#                                                            NA)) |>
+#                                 ungroup() |>
+#                                 select(River, Location, Reach,
+#                                        Type = Index,
+#                                        Hatchery:Natural_SE) |>
+#                                 mutate(Type = recode(Type,
+#                                                      'Y' = 'Index',
+#                                                      'N' = 'Non-Index')) |>
+#                                 bind_rows(trib_spawners |>
+#                                             pivot_wider(names_from = Origin,
+#                                                         values_from = c(Spawners,
+#                                                                         Spawners_SE),
+#                                                         names_glue = "{Origin}_{.value}") |>
+#                                             rlang::set_names(function(x) str_remove(x, "_Spawners")) |>
+#                                             mutate(Location = recode(Location,
+#                                                                      'CHL' = 'Chiwawa',
+#                                                                      'CHM' = 'Chumstick',
+#                                                                      'CHW' = 'Chiwaukum',
+#                                                                      'ICL' = 'Icicle',
+#                                                                      'LWN' = 'Little Wenatchee',
+#                                                                      'MCL' = 'Mission',
+#                                                                      'NAL' = 'Nason',
+#                                                                      'PES' = 'Peshastin',
+#                                                                      'WTL' = 'White River',
+#                                                                      "GLC" = "Gold",
+#                                                                      "LBC" = "Libby",
+#                                                                      "MSH" = "Methow Fish Hatchery",
+#                                                                      "MRW" = "Upper Methow",
+#                                                                      "TWR" = "Twisp",
+#                                                                      "CRW" = "Chewuch",
+#                                                                      "SCP" = "Spring Creek",
+#                                                                      "BVC" = "Beaver")) |>
+#                                             mutate(River = Location) |>
+#                                             mutate(Type = 'DABOM')) |>
+#                                 mutate(Location = factor(Location, levels = c('Below_TUM',
+#                                                                               'TUM_bb',
+#                                                                               'Icicle',
+#                                                                               'Peshastin',
+#                                                                               'Mission',
+#                                                                               'Chumstick',
+#                                                                               'Chiwaukum',
+#                                                                               'Chiwawa',
+#                                                                               'Nason',
+#                                                                               'Little Wenatchee',
+#                                                                               'White River',
+#                                                                               "Lower Methow",
+#                                                                               "Gold",
+#                                                                               "Libby",
+#                                                                               "Methow Fish Hatchery",
+#                                                                               "Upper Methow",
+#                                                                               "Twisp",
+#                                                                               "Chewuch",
+#                                                                               "Spring Creek",
+#                                                                               "Beaver"))) |>
+#                                 arrange(Location, Reach, Type) |>
+#                                 mutate(h_cv = Hatchery_SE / Hatchery,
+#                                        n_cv = Natural_SE / Natural)
+#
+#
+#                               redd_spwn_yr <- redd_results |>
+#                                 mutate(reach_type = recode(Index,
+#                                                            'Y' = 'Index',
+#                                                            'N' = 'Non-Index')) |>
+#                                 left_join(fpr_df %>%
+#                                             select(Location,
+#                                                    starts_with("fpr")),
+#                                           by = "Location") |>
+#                                 select(stream = River,
+#                                        Reach,
+#                                        reach_type,
+#                                        observed_redds = tot_feat,
+#                                        redd_est,
+#                                        redd_se,
+#                                        fpr,
+#                                        fpr_se) %>%
+#                                 mutate(redd_cv = redd_se / redd_est) %>%
+#                                 relocate(redd_cv,
+#                                          .before = fpr) %>%
+#                                 left_join(spwn_rch %>%
+#                                             select(stream = River,
+#                                                    Reach,
+#                                                    reach_type = Type,
+#                                                    NOS_est = Natural,
+#                                                    NOS_se = Natural_SE,
+#                                                    NOS_cv = n_cv,
+#                                                    HOS_est = Hatchery,
+#                                                    HOS_se = Hatchery_SE,
+#                                                    HOS_cv = h_cv),
+#                                           by = c("stream", "Reach", "reach_type"))
+#
+#                               spwn_yr <- spwn_rch |>
+#                                 group_by(River) |>
+#                                 summarize(across(c(nos_est = Natural,
+#                                                    hos_est = Hatchery),
+#                                                  sum,
+#                                                  na.rm = T),
+#                                           across(c(nos_se = Natural_SE,
+#                                                    hos_se = Hatchery_SE),
+#                                                  ~ sqrt(sum(.^2, na.rm = T))),
+#                                           .groups = "drop") %>%
+#                                 mutate(nos_cv = nos_se / nos_est,
+#                                        hos_cv = hos_se / hos_est) %>%
+#                                 mutate(total_spawners = nos_est + hos_est) |>
+#                                 mutate(across(River,
+#                                               recode,
+#                                               "Wenatchee" = "Wenatchee (mainstem)",
+#                                               "Methow" = "Methow (mainstem)"),
+#                                        across(River,
+#                                               as.factor),
+#                                        across(River,
+#                                               fct_relevel,
+#                                               "Wenatchee (mainstem)",
+#                                               "Methow (mainstem)",
+#                                               after = Inf)) |>
+#                                 arrange(River) |>
+#                                 select(stream = River,
+#                                        total_spawners,
+#                                        starts_with("nos"),
+#                                        starts_with("hos"))
+#
+#                               spwn_yr %<>%
+#                                 bind_rows(spwn_yr %>%
+#                                           summarize(stream = "Total",
+#                                                     across(c(total_spawners,
+#                                                              nos_est,
+#                                                              hos_est),
+#                                                            sum),
+#                                                     across(ends_with("_se"),
+#                                                            ~ sqrt(sum(.^2, na.rm = T))),
+#                                                     nos_cv = nos_se / nos_est,
+#                                                     hos_cv = hos_se / hos_est,
+#                                                     .groups = "drop")) %>%
+#                                 rowwise() %>%
+#                                 mutate(phos = hos_est / (hos_est + nos_est),
+#                                        phos_se = deltamethod(~ x1 / (x1 + x2),
+#                                                              mean = c(hos_est,
+#                                                                       nos_est),
+#                                                              cov = diag(c(hos_se,
+#                                                                           nos_se)^2))) %>%
+#                                 ungroup() %>%
+#                                 mutate(across(stream,
+#                                               as.factor),
+#                                        across(stream,
+#                                               fct_relevel,
+#                                               c("Wenatchee (mainstem)",
+#                                                 "Methow (mainstem)",
+#                                                 "Total"),
+#                                               after = Inf)) %>%
+#                                 arrange(stream)
+#
+#
+#                               list(results_lst = results_lst,
+#                                    fpr = fpr_df,
+#                                    redd_results = redd_results,
+#                                    spwn_rch = spwn_rch,
+#                                    redd_spwn_yr = redd_spwn_yr,
+#                                    spwn_yr = spwn_yr) %>%
+#                                 return()
+#
+#                               } else {
+#                                 # data from WDFW (Nate Fuchs' radio telemetry study)
+#                                 rt_df = tibble(year = rep(2015:2016, each = 2),
+#                                                Origin = rep(c("Hatchery", "Natural"), 2),
+#                                                ow_fish = c(20, 25, 4, 12),
+#                                                surv_fish = c(16, 24, 3, 9)) %>%
+#                                   mutate(phi = surv_fish / ow_fish,
+#                                          phi_se = sqrt((phi * (1 - phi))/ ow_fish))
+#
+#                                 # add years together
+#                                 rt_df %<>%
+#                                   bind_rows(rt_df %>%
+#                                               group_by(Origin) %>%
+#                                               summarize(across(c(ow_fish, surv_fish),
+#                                                                sum),
+#                                                         .groups = "drop") %>%
+#                                               mutate(phi = surv_fish / ow_fish,
+#                                                      phi_se = sqrt((phi * (1 - phi))/ ow_fish))) %>%
+#                                   mutate(across(year,
+#                                                 as.factor)) %>%
+#                                   mutate(across(year,
+#                                                 fct_explicit_na,
+#                                                 na_level = "Total"))
+#
+#                                 data("removal_df")
+#                                 yr = str_extract(file_name, "[:digit:]+")
+#
+#                                 rem_df = removal_df %>%
+#                                   filter(Year == yr,
+#                                          Subbasin == pop_nm) %>%
+#                                   select(-Year)
+#
+#                                 spwn_yr <- escp_wen %>%
+#                                   filter(Area == "Wen_all") %>%
+#                                   left_join(rem_df %>%
+#                                               group_by(Origin) %>%
+#                                               summarize(across(rem,
+#                                                                sum),
+#                                                         .groups = "drop"),
+#                                             by = "Origin") %>%
+#                                   rowwise() %>%
+#                                   mutate(escp = max(0, estimate - rem)) %>%
+#                                   ungroup() %>%
+#                                   full_join(rt_df %>%
+#                                               group_by(Origin) %>%
+#                                               summarize(across(c(ow_fish, surv_fish),
+#                                                                sum),
+#                                                         .groups = "drop") %>%
+#                                               mutate(phi = surv_fish / ow_fish,
+#                                                      phi_se = sqrt((phi * (1 - phi))/ ow_fish)) %>%
+#                                               select(-ends_with("fish")),
+#                                             by = "Origin") %>%
+#                                   rowwise() %>%
+#                                   mutate(all_spwn = escp * phi) %>%
+#                                   mutate(all_spwn_se = msm::deltamethod(~ x1 * x2,
+#                                                                         mean = c(escp, phi),
+#                                                                         cov = diag(c(se, phi_se)^2))) %>%
+#                                   ungroup() %>%
+#                                   left_join(trib_spawners %>%
+#                                               group_by(Origin) %>%
+#                                               summarize(across(Spawners,
+#                                                                sum),
+#                                                         across(Spawners_SE,
+#                                                                ~ sqrt(sum(.^2))),
+#                                                         .groups = "drop") %>%
+#                                               rename(trib_spwn = Spawners,
+#                                                      trib_se = Spawners_SE),
+#                                             by = "Origin") %>%
+#                                   mutate(main_spwn = all_spwn - trib_spwn,
+#                                          main_spwn_se = sqrt(all_spwn_se^2 + trib_se^2),
+#                                          across(main_spwn,
+#                                                 ~ if_else(. < 0, 0, .))) %>%
+#                                   mutate(Location = "Wenatchee (mainstem)",
+#                                          River = Location,
+#                                          Type = "RT") %>%
+#                                   select(River,
+#                                          Origin,
+#                                          Location,
+#                                          Type,
+#                                          Spawners = main_spwn,
+#                                          Spawners_SE = main_spwn_se) %>%
+#                                   bind_rows(trib_spawners %>%
+#                                               mutate(Location = recode(Location,
+#                                                                        'CHL' = 'Chiwawa',
+#                                                                        'CHM' = 'Chumstick',
+#                                                                        'CHW' = 'Chiwaukum',
+#                                                                        'ICL' = 'Icicle',
+#                                                                        'LWN' = 'Little Wenatchee',
+#                                                                        'MCL' = 'Mission',
+#                                                                        'NAL' = 'Nason',
+#                                                                        'PES' = 'Peshastin',
+#                                                                        'WTL' = 'White River',
+#                                                                        "GLC" = "Gold",
+#                                                                        "LBC" = "Libby",
+#                                                                        "MSH" = "Methow Fish Hatchery",
+#                                                                        "MRW" = "Upper Methow",
+#                                                                        "TWR" = "Twisp",
+#                                                                        "CRW" = "Chewuch",
+#                                                                        "SCP" = "Spring Creek",
+#                                                                        "BVC" = "Beaver")) |>
+#                                               mutate(River = Location) |>
+#                                               mutate(Type = 'DABOM')) |>
+#                                   pivot_wider(names_from = Origin,
+#                                               values_from = c(Spawners,
+#                                                               Spawners_SE),
+#                                               names_glue = "{Origin}_{.value}") |>
+#                                   rlang::set_names(function(x) str_remove(x, "_Spawners")) |>
+#                                   mutate(Location = factor(Location, levels = c('Below_TUM',
+#                                                                                 'TUM_bb',
+#                                                                                 'Icicle',
+#                                                                                 'Peshastin',
+#                                                                                 'Mission',
+#                                                                                 'Chumstick',
+#                                                                                 'Chiwaukum',
+#                                                                                 'Chiwawa',
+#                                                                                 'Nason',
+#                                                                                 'Little Wenatchee',
+#                                                                                 'White River',
+#                                                                                 "Wenatchee (mainstem)",
+#                                                                                 "Lower Methow",
+#                                                                                 "Gold",
+#                                                                                 "Libby",
+#                                                                                 "Methow Fish Hatchery",
+#                                                                                 "Upper Methow",
+#                                                                                 "Twisp",
+#                                                                                 "Chewuch",
+#                                                                                 "Spring Creek",
+#                                                                                 "Beaver"))) |>
+#                                   arrange(Location, Type) |>
+#                                   mutate(h_cv = Hatchery_SE / Hatchery,
+#                                          n_cv = Natural_SE / Natural,
+#                                          total_spawners = Natural + Hatchery) |>
+#                                   select(stream = River,
+#                                          # Reach,
+#                                          # reach_type = Type,
+#                                          total_spawners,
+#                                          nos_est = Natural,
+#                                          nos_se = Natural_SE,
+#                                          nos_cv = n_cv,
+#                                          hos_est = Hatchery,
+#                                          hos_se = Hatchery_SE,
+#                                          hos_cv = h_cv)
+#
+#                                 spwn_yr %<>%
+#                                   bind_rows(spwn_yr %>%
+#                                               summarize(stream = "Total",
+#                                                         across(c(total_spawners,
+#                                                                  nos_est,
+#                                                                  hos_est),
+#                                                                sum),
+#                                                         across(ends_with("_se"),
+#                                                                ~ sqrt(sum(.^2, na.rm = T))),
+#                                                         nos_cv = nos_se / nos_est,
+#                                                         hos_cv = hos_se / hos_est,
+#                                                         .groups = "drop")) %>%
+#                                   rowwise() %>%
+#                                   mutate(phos = hos_est / (hos_est + nos_est),
+#                                          phos_se = deltamethod(~ x1 / (x1 + x2),
+#                                                                mean = c(hos_est,
+#                                                                         nos_est),
+#                                                                cov = diag(c(hos_se,
+#                                                                             nos_se)^2))) %>%
+#                                   ungroup() %>%
+#                                   mutate(across(stream,
+#                                                 as.factor),
+#                                          across(stream,
+#                                                 fct_relevel,
+#                                                 c("Wenatchee (mainstem)",
+#                                                   "Methow (mainstem)",
+#                                                   "Total"),
+#                                                 after = Inf)) %>%
+#                                   arrange(stream)
+#
+#                                 list(results_lst = NA,
+#                                      fpr = fpr_df,
+#                                      redd_results = NA,
+#                                      spwn_rch = NA,
+#                                      redd_spwn_yr = NA,
+#                                      spwn_yr = spwn_yr) %>%
+#                                   return()
+#                               }
+#
+#                             },
+#                             otherwise = NULL))) |>
+#   select(-file_nm,
+#          -file_exists)
+
 
 spwn_est <- crossing(population = c("Wenatchee",
                                     "Methow"),
@@ -67,352 +503,105 @@ spwn_est <- crossing(population = c("Wenatchee",
                             spawn_year,
                             .f = function(pop_nm,
                                           yr) {
-                              file_nm = here('O:/Documents/Git/MyProjects/UCSthdReddObsErr/analysis/data/derived_data',
-                                             paste0(if_else(pop_nm == "Wenatchee",
-                                                            'wen_',
-                                                            if_else(pop_nm == "Methow",
-                                                                    "met_",
-                                                                    NA_character_)), yr, '.rda'))
+
+                              file_nm = if_else(pop_nm == "Wenatchee",
+                                                here("O:/Documents/Git/MyProjects",
+                                                     "SthdReddsWenatchee",
+                                                     "analysis/data/derived_data",
+                                                     paste0("wen_", yr, ".rda")),
+                                                if_else(pop_nm == "Methow",
+                                                        here("O:/Documents/Git/MyProjects",
+                                                             "SthdReddsWenatchee",
+                                                             "analysis/data/derived_data",
+                                                             paste0("met_", yr, ".rda")),
+                                                        NA_character_))
                               return(file_nm)
                             }),
          file_exists = map_lgl(file_nm,
                                .f = file.exists)) %>%
   filter(file_exists) %>%
-  mutate(results_list = map2(file_nm,
-                             population,
-                            .f = possibly(function(file_name,
-                                          pop_nm) {
+  mutate(results_list = map(file_nm,
+                            .f = possibly(function(file_name) {
+
                               load(file_name)
 
                               # for 2020, we'll need to do something different
                               if(str_detect(file_name, "_2020.rda",
                                             negate = T)) {
 
-                              results_lst <- redd_df |>
-                                bind_rows(redds_below_arrays) |>
-                                group_by(Index, SurveyType) |>
-                                nest(redd_data = -c(Index, SurveyType)) |>
-                                filter(!(is.na(Index) & is.na(SurveyType))) |>
-                                mutate(summ_lst = map2(redd_data, Index,
-                                                       .f = function(x, y) {
-                                                         summarizeRedds(redd_df = x,
-                                                                        group_vars = c("Reach"),
-                                                                        summ_vars = c("River",
-                                                                                      "Location"),
-                                                                        min_non0_wks = min_non0_wks,
-                                                                        min_redds = min_redds,
-                                                                        use_cor = if_else(y == "Y", T, F))
-                                                       })) |>
-                                ungroup()
-
-                              redd_results <- results_lst |>
-                                mutate(rch_res = map(summ_lst,
-                                                     "rch_est")) |>
-                                select(Index,
-                                       SurveyType,
-                                       rch_res) |>
-                                unnest(rch_res) |>
-                                ungroup() |>
-                                mutate(Reach = factor(Reach,
-                                                      levels = c(paste0('W', 1:10),
-                                                                 "C1",
-                                                                 "N1",
-                                                                 "P1",
-                                                                 paste0("MRW", 1:8)))) |>
-                                arrange(Reach,
-                                        Index) |>
-                                relocate(River, Reach, Location,
-                                         .before = 1)
-
-                              spwn_rch = redd_results |>
-                                select(River, Location, Reach, Index, redd_est, redd_se) |>
-                                left_join(fpr_df |>
-                                            select(Location, starts_with('fpr')),
-                                          by = "Location") |>
-                                left_join(fpr_df |>
-                                            select(Location, starts_with('phos')),
-                                          by = "Location") |>
-                                rowwise() |>
-                                mutate(Tot_Spawners = redd_est * fpr,
-                                       Hatchery = redd_est * fpr * phos,
-                                       Natural = redd_est * fpr * (1 - phos),
-                                       Hatchery_SE = ifelse(Tot_Spawners > 0,
-                                                            deltamethod(~ x1 * x2 * x3,
-                                                                        mean = c(redd_est, fpr, phos),
-                                                                        cov = diag(c(redd_se, fpr_se, phos_se)^2)),
-                                                            NA),
-                                       Natural_SE = ifelse(Tot_Spawners > 0,
-                                                           deltamethod(~ x1 * x2 * (1 - x3),
-                                                                       mean = c(redd_est, fpr, phos),
-                                                                       cov = diag(c(redd_se, fpr_se, phos_se)^2)),
-                                                           NA)) |>
-                                ungroup() |>
-                                select(River, Location, Reach,
-                                       Type = Index,
-                                       Hatchery:Natural_SE) |>
-                                mutate(Type = recode(Type,
-                                                     'Y' = 'Index',
-                                                     'N' = 'Non-Index')) |>
-                                bind_rows(trib_spawners |>
-                                            pivot_wider(names_from = Origin,
-                                                        values_from = c(Spawners,
-                                                                        Spawners_SE),
-                                                        names_glue = "{Origin}_{.value}") |>
-                                            rlang::set_names(function(x) str_remove(x, "_Spawners")) |>
-                                            mutate(Location = recode(Location,
-                                                                     'CHL' = 'Chiwawa',
-                                                                     'CHM' = 'Chumstick',
-                                                                     'CHW' = 'Chiwaukum',
-                                                                     'ICL' = 'Icicle',
-                                                                     'LWN' = 'Little Wenatchee',
-                                                                     'MCL' = 'Mission',
-                                                                     'NAL' = 'Nason',
-                                                                     'PES' = 'Peshastin',
-                                                                     'WTL' = 'White River',
-                                                                     "GLC" = "Gold",
-                                                                     "LBC" = "Libby",
-                                                                     "MSH" = "Methow Fish Hatchery",
-                                                                     "MRW" = "Upper Methow",
-                                                                     "TWR" = "Twisp",
-                                                                     "CRW" = "Chewuch",
-                                                                     "SCP" = "Spring Creek",
-                                                                     "BVC" = "Beaver")) |>
-                                            mutate(River = Location) |>
-                                            mutate(Type = 'DABOM')) |>
-                                mutate(Location = factor(Location, levels = c('Below_TUM',
-                                                                              'TUM_bb',
-                                                                              'Icicle',
-                                                                              'Peshastin',
-                                                                              'Mission',
-                                                                              'Chumstick',
-                                                                              'Chiwaukum',
-                                                                              'Chiwawa',
-                                                                              'Nason',
-                                                                              'Little Wenatchee',
-                                                                              'White River',
-                                                                              "Lower Methow",
-                                                                              "Gold",
-                                                                              "Libby",
-                                                                              "Methow Fish Hatchery",
-                                                                              "Upper Methow",
-                                                                              "Twisp",
-                                                                              "Chewuch",
-                                                                              "Spring Creek",
-                                                                              "Beaver"))) |>
-                                arrange(Location, Reach, Type) |>
-                                mutate(h_cv = Hatchery_SE / Hatchery,
-                                       n_cv = Natural_SE / Natural)
+                                results_lst <- summarize_redds(redd_df,
+                                                               species = "Steelhead",
+                                                               group_vars = c("river", "reach", "index", "survey_type"),
+                                                               summ_vars = c("river", "location", "index"),
+                                                               min_non0_wks = min_non0_wks,
+                                                               min_redds = min_redds,
+                                                               gauc = T,
+                                                               add_zeros = T,
+                                                               use_cor = T)
 
 
-                              redd_spwn_yr <- redd_results |>
-                                mutate(reach_type = recode(Index,
-                                                           'Y' = 'Index',
-                                                           'N' = 'Non-Index')) |>
-                                left_join(fpr_df %>%
-                                            select(Location,
-                                                   starts_with("fpr")),
-                                          by = "Location") |>
-                                select(stream = River,
-                                       Reach,
-                                       reach_type,
-                                       observed_redds = tot_feat,
-                                       redd_est,
-                                       redd_se,
-                                       fpr,
-                                       fpr_se) %>%
-                                mutate(redd_cv = redd_se / redd_est) %>%
-                                relocate(redd_cv,
-                                         .before = fpr) %>%
-                                left_join(spwn_rch %>%
-                                            select(stream = River,
-                                                   Reach,
-                                                   reach_type = Type,
-                                                   NOS_est = Natural,
-                                                   NOS_se = Natural_SE,
-                                                   NOS_cv = n_cv,
-                                                   HOS_est = Hatchery,
-                                                   HOS_se = Hatchery_SE,
-                                                   HOS_cv = h_cv),
-                                          by = c("stream", "Reach", "reach_type"))
+                                redd_results <- results_lst$rch_est |>
+                                  arrange(river,
+                                          reach,
+                                          index) %>%
+                                  relocate(river, reach, location,
+                                           .before = 1) |>
+                                  mutate(location = if_else(location == "Tributaries",
+                                                            as.character(river),
+                                                            location))
 
-                              spwn_yr <- spwn_rch |>
-                                group_by(River) |>
-                                summarize(across(c(nos_est = Natural,
-                                                   hos_est = Hatchery),
-                                                 sum,
-                                                 na.rm = T),
-                                          across(c(nos_se = Natural_SE,
-                                                   hos_se = Hatchery_SE),
-                                                 ~ sqrt(sum(.^2, na.rm = T))),
-                                          .groups = "drop") %>%
-                                mutate(nos_cv = nos_se / nos_est,
-                                       hos_cv = hos_se / hos_est) %>%
-                                mutate(total_spawners = nos_est + hos_est) |>
-                                mutate(across(River,
-                                              recode,
-                                              "Wenatchee" = "Wenatchee (mainstem)",
-                                              "Methow" = "Methow (mainstem)"),
-                                       across(River,
-                                              as.factor),
-                                       across(River,
-                                              fct_relevel,
-                                              "Wenatchee (mainstem)",
-                                              "Methow (mainstem)",
-                                              after = Inf)) |>
-                                arrange(River) |>
-                                select(stream = River,
-                                       total_spawners,
-                                       starts_with("nos"),
-                                       starts_with("hos"))
-
-                              spwn_yr %<>%
-                                bind_rows(spwn_yr %>%
-                                          summarize(stream = "Total",
-                                                    across(c(total_spawners,
-                                                             nos_est,
-                                                             hos_est),
-                                                           sum),
-                                                    across(ends_with("_se"),
-                                                           ~ sqrt(sum(.^2, na.rm = T))),
-                                                    nos_cv = nos_se / nos_est,
-                                                    hos_cv = hos_se / hos_est,
-                                                    .groups = "drop")) %>%
-                                rowwise() %>%
-                                mutate(phos = hos_est / (hos_est + nos_est),
-                                       phos_se = deltamethod(~ x1 / (x1 + x2),
-                                                             mean = c(hos_est,
-                                                                      nos_est),
-                                                             cov = diag(c(hos_se,
-                                                                          nos_se)^2))) %>%
-                                ungroup() %>%
-                                mutate(across(stream,
-                                              as.factor),
-                                       across(stream,
-                                              fct_relevel,
-                                              c("Wenatchee (mainstem)",
-                                                "Methow (mainstem)",
-                                                "Total"),
-                                              after = Inf)) %>%
-                                arrange(stream)
-
-
-                              list(results_lst = results_lst,
-                                   fpr = fpr_df,
-                                   redd_results = redd_results,
-                                   spwn_rch = spwn_rch,
-                                   redd_spwn_yr = redd_spwn_yr,
-                                   spwn_yr = spwn_yr) %>%
-                                return()
-
-                              } else {
-                                # data from WDFW (Nate Fuchs' radio telemetry study)
-                                rt_df = tibble(year = rep(2015:2016, each = 2),
-                                               Origin = rep(c("Hatchery", "Natural"), 2),
-                                               ow_fish = c(20, 25, 4, 12),
-                                               surv_fish = c(16, 24, 3, 9)) %>%
-                                  mutate(phi = surv_fish / ow_fish,
-                                         phi_se = sqrt((phi * (1 - phi))/ ow_fish))
-
-                                # add years together
-                                rt_df %<>%
-                                  bind_rows(rt_df %>%
-                                              group_by(Origin) %>%
-                                              summarize(across(c(ow_fish, surv_fish),
-                                                               sum),
-                                                        .groups = "drop") %>%
-                                              mutate(phi = surv_fish / ow_fish,
-                                                     phi_se = sqrt((phi * (1 - phi))/ ow_fish))) %>%
-                                  mutate(across(year,
-                                                as.factor)) %>%
-                                  mutate(across(year,
-                                                fct_explicit_na,
-                                                na_level = "Total"))
-
-                                data("removal_df")
-                                yr = str_extract(file_name, "[:digit:]+")
-
-                                rem_df = removal_df %>%
-                                  filter(Year == yr,
-                                         Subbasin == pop_nm) %>%
-                                  select(-Year)
-
-                                spwn_yr <- escp_wen %>%
-                                  filter(Area == "Wen_all") %>%
-                                  left_join(rem_df %>%
-                                              group_by(Origin) %>%
-                                              summarize(across(rem,
-                                                               sum),
-                                                        .groups = "drop"),
-                                            by = "Origin") %>%
+                                spwn_rch = redd_results %>%
+                                  select(river, location, reach, index, redd_est, redd_se) %>%
+                                  left_join(fpr_df %>%
+                                              select(location, starts_with('fpr')),
+                                            by = "location") %>%
+                                  left_join(fpr_df %>%
+                                              select(location, starts_with('phos')),
+                                            by = "location") %>%
                                   rowwise() %>%
-                                  mutate(escp = max(0, estimate - rem)) %>%
+                                  mutate(Tot_Spawners = redd_est * fpr,
+                                         Hatchery = redd_est * fpr * phos,
+                                         Natural = redd_est * fpr * (1 - phos),
+                                         Hatchery_SE = ifelse(Tot_Spawners > 0,
+                                                              deltamethod(~ x1 * x2 * x3,
+                                                                          mean = c(redd_est, fpr, phos),
+                                                                          cov = diag(c(redd_se, fpr_se, phos_se)^2)),
+                                                              NA),
+                                         Natural_SE = ifelse(Tot_Spawners > 0,
+                                                             deltamethod(~ x1 * x2 * (1 - x3),
+                                                                         mean = c(redd_est, fpr, phos),
+                                                                         cov = diag(c(redd_se, fpr_se, phos_se)^2)),
+                                                             NA)) %>%
                                   ungroup() %>%
-                                  full_join(rt_df %>%
-                                              group_by(Origin) %>%
-                                              summarize(across(c(ow_fish, surv_fish),
-                                                               sum),
-                                                        .groups = "drop") %>%
-                                              mutate(phi = surv_fish / ow_fish,
-                                                     phi_se = sqrt((phi * (1 - phi))/ ow_fish)) %>%
-                                              select(-ends_with("fish")),
-                                            by = "Origin") %>%
-                                  rowwise() %>%
-                                  mutate(all_spwn = escp * phi) %>%
-                                  mutate(all_spwn_se = msm::deltamethod(~ x1 * x2,
-                                                                        mean = c(escp, phi),
-                                                                        cov = diag(c(se, phi_se)^2))) %>%
-                                  ungroup() %>%
-                                  left_join(trib_spawners %>%
-                                              group_by(Origin) %>%
-                                              summarize(across(Spawners,
-                                                               sum),
-                                                        across(Spawners_SE,
-                                                               ~ sqrt(sum(.^2))),
-                                                        .groups = "drop") %>%
-                                              rename(trib_spwn = Spawners,
-                                                     trib_se = Spawners_SE),
-                                            by = "Origin") %>%
-                                  mutate(main_spwn = all_spwn - trib_spwn,
-                                         main_spwn_se = sqrt(all_spwn_se^2 + trib_se^2),
-                                         across(main_spwn,
-                                                ~ if_else(. < 0, 0, .))) %>%
-                                  mutate(Location = "Wenatchee (mainstem)",
-                                         River = Location,
-                                         Type = "RT") %>%
-                                  select(River,
-                                         Origin,
-                                         Location,
-                                         Type,
-                                         Spawners = main_spwn,
-                                         Spawners_SE = main_spwn_se) %>%
+                                  mutate(reach = factor(reach,
+                                                        levels = c(paste0('W', 1:10),
+                                                                   "C1",
+                                                                   "N1",
+                                                                   "P1",
+                                                                   paste0("MRW", 1:8)))) %>%
+                                  select(river, location, reach,
+                                         type = index,
+                                         Hatchery:Natural_SE) %>%
+                                  mutate(across(type,
+                                                recode,
+                                                'Y' = 'Index',
+                                                'N' = 'Non-Index'),
+                                         across(location,
+                                                fct_recode,
+                                                "Below Tumwater (mainstem)" = "Below Tumwater",
+                                                "Above Tumwater (mainstem)" = "Above Tumwater")) %>%
                                   bind_rows(trib_spawners %>%
-                                              mutate(Location = recode(Location,
-                                                                       'CHL' = 'Chiwawa',
-                                                                       'CHM' = 'Chumstick',
-                                                                       'CHW' = 'Chiwaukum',
-                                                                       'ICL' = 'Icicle',
-                                                                       'LWN' = 'Little Wenatchee',
-                                                                       'MCL' = 'Mission',
-                                                                       'NAL' = 'Nason',
-                                                                       'PES' = 'Peshastin',
-                                                                       'WTL' = 'White River',
-                                                                       "GLC" = "Gold",
-                                                                       "LBC" = "Libby",
-                                                                       "MSH" = "Methow Fish Hatchery",
-                                                                       "MRW" = "Upper Methow",
-                                                                       "TWR" = "Twisp",
-                                                                       "CRW" = "Chewuch",
-                                                                       "SCP" = "Spring Creek",
-                                                                       "BVC" = "Beaver")) |>
-                                              mutate(River = Location) |>
-                                              mutate(Type = 'DABOM')) |>
-                                  pivot_wider(names_from = Origin,
-                                              values_from = c(Spawners,
-                                                              Spawners_SE),
-                                              names_glue = "{Origin}_{.value}") |>
-                                  rlang::set_names(function(x) str_remove(x, "_Spawners")) |>
-                                  mutate(Location = factor(Location, levels = c('Below_TUM',
-                                                                                'TUM_bb',
+                                              rename(spawners_SE = spawners_se) %>%
+                                              pivot_wider(names_from = origin,
+                                                          values_from = c(spawners,
+                                                                          spawners_SE),
+                                                          names_glue = "{origin}_{.value}") %>%
+                                              rlang::set_names(function(x) str_remove(x, "_spawners")) %>%
+                                              mutate(river = location) %>%
+                                              mutate(type = 'DABOM') %>%
+                                              select(-spawn_year)) %>%
+                                  mutate(location = factor(location, levels = c('Below Tumwater (mainstem)',
+                                                                                'Above Tumwater (mainstem)',
                                                                                 'Icicle',
                                                                                 'Peshastin',
                                                                                 'Mission',
@@ -422,7 +611,6 @@ spwn_est <- crossing(population = c("Wenatchee",
                                                                                 'Nason',
                                                                                 'Little Wenatchee',
                                                                                 'White River',
-                                                                                "Wenatchee (mainstem)",
                                                                                 "Lower Methow",
                                                                                 "Gold",
                                                                                 "Libby",
@@ -431,25 +619,76 @@ spwn_est <- crossing(population = c("Wenatchee",
                                                                                 "Twisp",
                                                                                 "Chewuch",
                                                                                 "Spring Creek",
-                                                                                "Beaver"))) |>
-                                  arrange(Location, Type) |>
+                                                                                "Beaver"))) %>%
+                                  arrange(location, reach, type) %>%
                                   mutate(h_cv = Hatchery_SE / Hatchery,
-                                         n_cv = Natural_SE / Natural,
-                                         total_spawners = Natural + Hatchery) |>
-                                  select(stream = River,
-                                         # Reach,
-                                         # reach_type = Type,
+                                         n_cv = Natural_SE / Natural)
+
+
+                                redd_spwn_yr <- redd_results |>
+                                  mutate(reach_type = recode(index,
+                                                             'Y' = 'Index',
+                                                             'N' = 'Non-Index')) |>
+                                  left_join(fpr_df %>%
+                                              select(location,
+                                                     starts_with("fpr")),
+                                            by = "location") |>
+                                  select(river,
+                                         reach,
+                                         reach_type,
+                                         observed_redds = tot_feat,
+                                         redd_est,
+                                         redd_se,
+                                         fpr,
+                                         fpr_se) %>%
+                                  mutate(redd_cv = redd_se / redd_est) %>%
+                                  relocate(redd_cv,
+                                           .before = fpr) %>%
+                                  left_join(spwn_rch %>%
+                                              select(river,
+                                                     reach,
+                                                     reach_type = type,
+                                                     NOS_est = Natural,
+                                                     NOS_se = Natural_SE,
+                                                     NOS_cv = n_cv,
+                                                     HOS_est = Hatchery,
+                                                     HOS_se = Hatchery_SE,
+                                                     HOS_cv = h_cv),
+                                            by = c("river", "reach", "reach_type"))
+
+                                spwn_yr <- spwn_rch |>
+                                  group_by(river) |>
+                                  summarize(across(c(nos_est = Natural,
+                                                     hos_est = Hatchery),
+                                                   sum,
+                                                   na.rm = T),
+                                            across(c(nos_se = Natural_SE,
+                                                     hos_se = Hatchery_SE),
+                                                   ~ sqrt(sum(.^2, na.rm = T))),
+                                            .groups = "drop") %>%
+                                  mutate(nos_cv = nos_se / nos_est,
+                                         hos_cv = hos_se / hos_est) %>%
+                                  mutate(total_spawners = nos_est + hos_est) |>
+                                  mutate(across(river,
+                                                recode,
+                                                "Wenatchee" = "Wenatchee (mainstem)",
+                                                "Methow" = "Methow (mainstem)"),
+                                         across(river,
+                                                as.factor),
+                                         across(river,
+                                                fct_relevel,
+                                                "Wenatchee (mainstem)",
+                                                "Methow (mainstem)",
+                                                after = Inf)) |>
+                                  arrange(river) |>
+                                  select(river,
                                          total_spawners,
-                                         nos_est = Natural,
-                                         nos_se = Natural_SE,
-                                         nos_cv = n_cv,
-                                         hos_est = Hatchery,
-                                         hos_se = Hatchery_SE,
-                                         hos_cv = h_cv)
+                                         starts_with("nos"),
+                                         starts_with("hos"))
 
                                 spwn_yr %<>%
                                   bind_rows(spwn_yr %>%
-                                              summarize(stream = "Total",
+                                              summarize(river = "Total",
                                                         across(c(total_spawners,
                                                                  nos_est,
                                                                  hos_est),
@@ -467,15 +706,170 @@ spwn_est <- crossing(population = c("Wenatchee",
                                                                cov = diag(c(hos_se,
                                                                             nos_se)^2))) %>%
                                   ungroup() %>%
-                                  mutate(across(stream,
+                                  mutate(across(river,
                                                 as.factor),
-                                         across(stream,
+                                         across(river,
                                                 fct_relevel,
                                                 c("Wenatchee (mainstem)",
                                                   "Methow (mainstem)",
                                                   "Total"),
                                                 after = Inf)) %>%
-                                  arrange(stream)
+                                  arrange(river)
+
+
+                                list(results_lst = results_lst,
+                                     fpr = fpr_df,
+                                     redd_results = redd_results,
+                                     spwn_rch = spwn_rch,
+                                     redd_spwn_yr = redd_spwn_yr,
+                                     spwn_yr = spwn_yr) %>%
+                                  return()
+
+                              } else {
+                                # data from WDFW (Nate Fuchs' radio telemetry study)
+                                rt_df = tibble(year = rep(2015:2016, each = 2),
+                                               origin = rep(c("Hatchery", "Natural"), 2),
+                                               ow_fish = c(20, 25, 4, 12),
+                                               surv_fish = c(16, 24, 3, 9)) %>%
+                                  mutate(phi = surv_fish / ow_fish,
+                                         phi_se = sqrt((phi * (1 - phi))/ ow_fish))
+
+                                # add years together
+                                rt_df %<>%
+                                  bind_rows(rt_df %>%
+                                              group_by(origin) %>%
+                                              summarize(across(c(ow_fish, surv_fish),
+                                                               sum),
+                                                        .groups = "drop") %>%
+                                              mutate(phi = surv_fish / ow_fish,
+                                                     phi_se = sqrt((phi * (1 - phi))/ ow_fish))) %>%
+                                  mutate(across(year,
+                                                as.factor)) %>%
+                                  mutate(across(year,
+                                                fct_explicit_na,
+                                                na_level = "Total"))
+
+                                spwn_yr <- escp_wen %>%
+                                  filter(location == "Wen_all") %>%
+                                  left_join(rem_df %>%
+                                              group_by(origin) %>%
+                                              summarize(across(removed,
+                                                               sum),
+                                                        .groups = "drop"),
+                                            by = "origin") %>%
+                                  rowwise() %>%
+                                  mutate(escp = max(0, estimate - removed)) %>%
+                                  ungroup() %>%
+                                  full_join(rt_df %>%
+                                              filter(year == "Total") %>%
+                                              select(-year,
+                                                     -ends_with("fish")),
+                                            by = "origin") %>%
+                                  rowwise() %>%
+                                  mutate(all_spwn = escp * phi) %>%
+                                  mutate(all_spwn_se = msm::deltamethod(~ x1 * x2,
+                                                                        mean = c(escp, phi),
+                                                                        cov = diag(c(se, phi_se)^2))) %>%
+                                  ungroup() %>%
+                                  left_join(trib_spawners %>%
+                                              group_by(origin) %>%
+                                              summarize(across(spawners,
+                                                               sum),
+                                                        across(spawners_se,
+                                                               ~ sqrt(sum(.^2))),
+                                                        .groups = "drop") %>%
+                                              rename(trib_spwn = spawners,
+                                                     trib_se = spawners_se),
+                                            by = "origin") %>%
+                                  mutate(main_spwn = all_spwn - trib_spwn,
+                                         main_spwn_se = sqrt(all_spwn_se^2 + trib_se^2),
+                                         across(main_spwn,
+                                                ~ if_else(. < 0, 0, .))) %>%
+                                  mutate(location = "Wenatchee (mainstem)",
+                                         river = location,
+                                         type = "RT") %>%
+                                  select(river,
+                                         origin,
+                                         location,
+                                         type,
+                                         spawners = main_spwn,
+                                         spawners_se = main_spwn_se) %>%
+                                  bind_rows(trib_spawners %>%
+                                              mutate(river = location) |>
+                                              mutate(type = 'DABOM')) |>
+                                  pivot_wider(names_from = origin,
+                                              values_from = c(spawners,
+                                                              spawners_se),
+                                              names_glue = "{origin}_{.value}") |>
+                                  rlang::set_names(function(x) str_remove(x, "_spawners")) |>
+                                  mutate(across(
+                                    location,
+                                    factor,
+                                    levels = c('Below_TUM',
+                                               'TUM_bb',
+                                               'Icicle',
+                                               'Peshastin',
+                                               'Mission',
+                                               'Chumstick',
+                                               'Chiwaukum',
+                                               'Chiwawa',
+                                               'Nason',
+                                               'Little Wenatchee',
+                                               'White River',
+                                               "Wenatchee (mainstem)",
+                                               "Lower Methow",
+                                               "Gold",
+                                               "Libby",
+                                               "Methow Fish Hatchery",
+                                               "Upper Methow",
+                                               "Twisp",
+                                               "Chewuch",
+                                               "Spring Creek",
+                                               "Beaver"))) |>
+                                  arrange(location, type) |>
+                                  mutate(h_cv = Hatchery_se / Hatchery,
+                                         n_cv = Natural_se / Natural,
+                                         total_spawners = Natural + Hatchery) |>
+                                  select(river,
+                                         # reach,
+                                         # reach_type = type,
+                                         total_spawners,
+                                         nos_est = Natural,
+                                         nos_se = Natural_se,
+                                         nos_cv = n_cv,
+                                         hos_est = Hatchery,
+                                         hos_se = Hatchery_se,
+                                         hos_cv = h_cv)
+
+                                spwn_yr %<>%
+                                  bind_rows(spwn_yr %>%
+                                              summarize(river = "Total",
+                                                        across(c(total_spawners,
+                                                                 nos_est,
+                                                                 hos_est),
+                                                               sum),
+                                                        across(ends_with("_se"),
+                                                               ~ sqrt(sum(.^2, na.rm = T))),
+                                                        nos_cv = nos_se / nos_est,
+                                                        hos_cv = hos_se / hos_est,
+                                                        .groups = "drop")) %>%
+                                  rowwise() %>%
+                                  mutate(phos = hos_est / (hos_est + nos_est),
+                                         phos_se = deltamethod(~ x1 / (x1 + x2),
+                                                               mean = c(hos_est,
+                                                                        nos_est),
+                                                               cov = diag(c(hos_se,
+                                                                            nos_se)^2))) %>%
+                                  ungroup() %>%
+                                  mutate(across(river,
+                                                as.factor),
+                                         across(river,
+                                                fct_relevel,
+                                                c("Wenatchee (mainstem)",
+                                                  "Methow (mainstem)",
+                                                  "Total"),
+                                                after = Inf)) %>%
+                                  arrange(river)
 
                                 list(results_lst = NA,
                                      fpr = fpr_df,
@@ -509,7 +903,7 @@ spwn_df <- spwn_est %>%
 #-----------------------------------------------------------------
 # generate tables based on DABOM output
 dabom_est <- crossing(spawn_year = c(2011:max_yr)) %>%
-  mutate(run_year = spawn_year -1) %>%
+  mutate(run_year = spawn_year - 1) %>%
   select(run_year, spawn_year) %>%
   mutate(dam_cnt_name = if_else(spawn_year %in% c(2011:2015, 2018),
                                 "PriestRapids",
@@ -518,7 +912,7 @@ dabom_est <- crossing(spawn_year = c(2011:max_yr)) %>%
                             dam_cnt_name,
                             .f = function(yr, dam_cnt_name) {
 
-                              cat(paste("\n\t Estimates from", yr, "\n"))
+                              message(paste("\n\t Estimates from", yr, "\n"))
 
                               # load data
                               load(here("analysis/data/derived_data/estimates",
@@ -683,12 +1077,12 @@ dabom_est <- crossing(spawn_year = c(2011:max_yr)) %>%
                                               "Natural" = "W",
                                               "Hatchery" = "H")) %>%
                                 mutate(group = paste(population, origin, sep = "_")) %>%
+                                arrange(population, origin, sex) %>%
                                 group_by(group) %>%
                                 mutate(total_sexed = sum(n_tags)) %>%
                                 mutate(prop = n_tags / total_sexed,
                                        prop_se = sqrt((prop * (1 - prop)) / total_sexed)) %>%
                                 ungroup() %>%
-                                arrange(population, origin, sex) %>%
                                 left_join(pop_escp_yr %>%
                                             rename(total_est = total_escapement) %>%
                                             rowwise() %>%
@@ -1090,7 +1484,6 @@ tag_df <- dabom_est |>
          path) |>
   makeTableNms()
 
-
 sex_prop <- dabom_est |>
   mutate(res = map(all_results,
                    "sex_yr")) |>
@@ -1194,6 +1587,219 @@ mark_grp_pop_df <- dabom_est %>%
          -all_results) %>%
   unnest(res) |>
   makeTableNms()
+
+#-----------------------------------------------------------------
+# pull together estimates of sex call error rates at Priest
+# check for duplicate tags
+read_excel(paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
+                  "UC_Sthd/inputs/Bio Data/",
+                  "Sex and Origin PRD-Brood Comparison Data/",
+                  "STHD UC Brood Collections_2011 to current.xlsx"),
+           sheet = "Brood Collected_PIT Tagged Only") |>
+  clean_names() |>
+  distinct() |>
+  # filter(recaptured_pit %in% recaptured_pit[duplicated(recaptured_pit)]) |>
+  # arrange(recaptured_pit) |>
+  # group_by(recaptured_pit) |>
+  # mutate(n_final_sex = n_distinct(sex_final)) |>
+  # ungroup() |>
+  # filter(n_final_sex > 1)
+  # as.data.frame()
+  select(spawn_year,
+         tag_code = recaptured_pit,
+         sex_final) |>
+  distinct() |>
+  filter(tag_code %in% tag_code[duplicated(tag_code)])
+
+# estimate error rate for each sex
+sex_err_rate <- tag_df |>
+  clean_names() |>
+  select(spawn_year,
+         tag_code,
+         sex_field = sex) |>
+  inner_join(read_excel(paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
+                               "UC_Sthd/inputs/Bio Data/",
+                               "Sex and Origin PRD-Brood Comparison Data/",
+                               "STHD UC Brood Collections_2011 to current.xlsx"),
+                        sheet = "Brood Collected_PIT Tagged Only") |>
+               clean_names() |>
+               rename(tag_code = recaptured_pit) |>
+               select(spawn_year,
+                      tag_code,
+                      sex_final) |>
+               distinct(),
+             by = c("spawn_year",
+                    "tag_code")) |>
+  filter(!is.na(sex_final),
+         !is.na(sex_field)) |>
+  mutate(agree = if_else(sex_field == sex_final,
+                         T, F)) |>
+  group_by(spawn_year,
+           sex = sex_field) |>
+  summarize(n_tags = n_distinct(tag_code),
+            n_true = sum(agree),
+            n_false = sum(!agree),
+            .groups = "drop") |>
+  mutate(binom_ci = map2(n_false,
+                         n_tags,
+                         .f = function(x, y) {
+                           DescTools::BinomCI(x, y) |>
+                             as_tibble()
+                         })) |>
+  unnest(binom_ci) |>
+  clean_names() |>
+  rename(perc_false = est,
+         lowerci = lwr_ci,
+         upperci = upr_ci) |>
+  mutate(perc_se = sqrt((perc_false * (1 - perc_false)) / n_tags)) |>
+  relocate(perc_se,
+           .after = "perc_false")
+
+# re-calculate proportion of each sex in each population each year
+sex_prop <- dabom_est |>
+  mutate(res = map(all_results,
+                   "sex_yr")) |>
+  select(-dam_cnt_name,
+         -all_results) |>
+  unnest(res) |>
+  mutate(across(origin,
+                as_factor)) |>
+  select(run_year:total_sexed) |>
+  rename(priest_tags = n_tags) |>
+  left_join(sex_err_rate |>
+              select(spawn_year,
+                     sex,
+                     starts_with("perc")),
+            by = c("spawn_year", "sex")) |>
+  pivot_wider(names_from = sex,
+              values_from = c(priest_tags,
+                              perc_false,
+                              perc_se)) |>
+  mutate(true_male = priest_tags_M - (priest_tags_M * perc_false_M) + (priest_tags_F * perc_false_F),
+         true_female = priest_tags_F - (priest_tags_F * perc_false_F) + (priest_tags_M * perc_false_M)) |>
+  # mutate(across(starts_with("true"),
+  #               janitor::round_half_up)) |>
+  rowwise() |>
+  mutate(true_m_se = msm::deltamethod(~ x1 - (x1 * x2) + (x3 * x4),
+                                      mean = c(priest_tags_M,
+                                               perc_false_M,
+                                               priest_tags_F,
+                                               perc_false_F),
+                                      cov = diag(c(0,
+                                                   perc_se_M,
+                                                   0,
+                                                   perc_se_F)^2)),
+         true_f_se = msm::deltamethod(~ x1 - (x1 * x2) + (x3 * x4),
+                                      mean = c(priest_tags_F,
+                                               perc_false_F,
+                                               priest_tags_M,
+                                               perc_false_M),
+                                      cov = diag(c(0,
+                                                   perc_se_F,
+                                                   0,
+                                                   perc_se_M)^2))) |>
+  mutate(n_sexed = true_male + true_female,
+         across(n_sexed,
+                round_half_up),
+         prop_m = true_male / (true_male + true_female),
+         prop_se = msm::deltamethod(~ x1 / (x1 + x2),
+                                    mean = c(true_male,
+                                             true_female),
+                                    cov = diag(c(true_m_se,
+                                                 true_f_se)^2))) |>
+  ungroup() |>
+  select(run_year:origin,
+         total_sexed,
+         contains("priest"),
+         n_sexed,
+         starts_with("true"),
+         starts_with("prop")) |>
+  mutate(prop_f = 1 - prop_m) |>
+  # filter(total_sexed != n_sexed)
+  clean_names() |>
+  pivot_longer(cols = c(starts_with("priest"),
+                        starts_with("true"),
+                        starts_with("prop"))) |>
+  mutate(sex = if_else(str_detect(name, "_m"),
+                       "M", "F"),
+         across(name,
+                str_remove,
+                "_male"),
+         across(name,
+                str_remove,
+                "_female"),
+         across(name,
+                str_remove,
+                "_m"),
+         across(name,
+                str_remove,
+                "_f"),
+         across(name,
+                str_remove,
+                "_M"),
+         across(name,
+                str_remove,
+                "_F"),
+         across(name,
+                str_replace,
+                "true",
+                "n_tags")) |>
+  pivot_wider(names_from = "name",
+              values_from = "value") |>
+  arrange(spawn_year,
+          population,
+          origin,
+          sex) |>
+  fill(prop_se,
+       .direction = "down") |>
+  select(run_year:origin,
+         sex,
+         priest_tags,
+         n_tags,
+         total_sexed = n_sexed,
+         # total_sexed,
+         starts_with("prop")) |>
+  mutate(across(c(n_tags,
+                  total_sexed),
+                round_half_up)) |>
+  left_join(pop_escp |>
+              clean_names() |>
+              rename(total_est = total_escapement) %>%
+              rowwise() %>%
+              mutate(total_se = sqrt(sum(c(nos_se,
+                                           hos_se)^2))) %>%
+              ungroup() %>%
+              select(run_year,
+                     spawn_year,
+                     population,
+                     ends_with("est"),
+                     ends_with("se")) %>%
+              pivot_longer(c(ends_with("est"),
+                             ends_with("se"))) %>%
+              mutate(type = if_else(str_detect(name, "_se$"),
+                                    "se",
+                                    "est"),
+                     origin = str_split(name, "_", simplify = T)[,1],
+                     across(origin,
+                            recode,
+                            "total" = "All",
+                            "nos" = "Natural",
+                            "hos" = "Hatchery")) %>%
+              select(-name) %>%
+              pivot_wider(names_from = type,
+                          values_from = value),
+            by = c("run_year", "spawn_year", "population", "origin")) |>
+  rowwise() |>
+  mutate(escp = est * prop,
+         escp_se = msm::deltamethod(~ x1 * x2,
+                                    mean = c(est,
+                                             prop),
+                                    cov = diag(c(se, prop_se)^2))) |>
+  ungroup() |>
+  select(-est,
+         -se) |>
+  makeTableNms()
+
 
 #-----------------------------------------------------------------
 # generate table of escapement estimates at Priest
@@ -1300,53 +1906,6 @@ dam_cnt_tab <- priest_df |>
                                     `Total Tags` / Total,
                                     `Total Tags` / `Modelled Total`))
 
-
-#-----------------------------------------------------------------
-# pull together estimates of sex call error rates at Priest
-sex_err_rate <- tag_df |>
-  clean_names() |>
-  select(spawn_year,
-         tag_code,
-         sex_field = sex) |>
-  inner_join(read_excel(paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
-                               "UC_Sthd/inputs/Bio Data/",
-                               "Sex and Origin PRD-Brood Comparison Data/",
-                               "STHD UC Brood Collections_2011 to current.xlsx"),
-                        sheet = "Brood Collected_PIT Tagged Only") |>
-               clean_names() |>
-               rename(tag_code = recaptured_pit) |>
-               select(spawn_year,
-                      tag_code,
-                      sex_final),
-             by = c("spawn_year",
-                    "tag_code")) |>
-  filter(!is.na(sex_final),
-         !is.na(sex_field)) |>
-  mutate(agree = if_else(sex_field == sex_final,
-                         T, F)) |>
-  group_by(spawn_year,
-           sex = sex_field) |>
-  summarize(n_tags = n_distinct(tag_code),
-            n_true = sum(agree),
-            n_false = sum(!agree),
-            .groups = "drop") |>
-  mutate(binom_ci = map2(n_false,
-                         n_tags,
-                         .f = function(x, y) {
-                           DescTools::BinomCI(x, y) |>
-                             as_tibble()
-                         })) |>
-  unnest(binom_ci) |>
-  clean_names() |>
-  rename(perc_false = est,
-         lowerci = lwr_ci,
-         upperci = upr_ci) |>
-  mutate(perc_se = sqrt((perc_false * (1 - perc_false)) / n_tags)) |>
-  relocate(perc_se,
-           .after = "perc_false") |>
-  makeTableNms()
-
-
 #-----------------------------------------------------------------
 # put together in a list to save / write to Excel
 # make some decisions about rounding
@@ -1420,6 +1979,14 @@ save_list <- list(
     mutate(across(ends_with("Year"),
                   as.integer)),
 
+  "Sex Error Rates" = sex_err_rate |>
+    makeTableNms() |>
+    mutate(across(ends_with("Year"),
+                  as.integer)) |>
+    mutate(across(where(is.double),
+                  round,
+                  digits = 3)),
+
   "Run Escp Sex" = sex_prop |>
     mutate(across(ends_with("Year"),
                   as.integer),
@@ -1484,14 +2051,8 @@ save_list <- list(
                   ~ as.integer(round_half_up(.)))) |>
     mutate(across(where(is.double),
                   round,
-                  digits = 3)),
-
-  "Sex Error Rates" = sex_err_rate |>
-    mutate(across(ends_with("Year"),
-                  as.integer)) |>
-    mutate(across(where(is.double),
-                  round,
                   digits = 3))
+
 )
 
 #-----------------------------------------------------------------
