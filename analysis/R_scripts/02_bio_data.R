@@ -186,7 +186,7 @@ names(df)[str_detect(names(df), "PDV")] <- col_nms$Label[match(names(df)[str_det
 bio_2021 <- df %>%
   clean_names() %>%
   mutate(across(event_date,
-                ymd_hms)) %>%
+                ~ ymd_hms(.))) %>%
   mutate(brood_year = "BY21") %>%
   mutate(year = paste0("20", str_remove(brood_year, "^BY")),
          year = as.numeric(year)) %>%
@@ -203,7 +203,7 @@ bio_2021 <- df %>%
                      scale_age) %>%
               distinct()) %>%
   mutate(across(length,
-                as.numeric)) %>%
+                ~ as.numeric(.))) %>%
   # mutate(scale_age = NA_character_) %>%
   select(record_id,
          brood_year,
@@ -297,9 +297,10 @@ bio_2022 <- read_csv(here("analysis/data/raw_data/WDFW",
   mutate(year = paste0("20", str_remove(brood_year, "^BY")),
          year = as.numeric(year)) %>%
   mutate(species = "ST") %>%
-  mutate(across(sex,
-                recode,
-                "FemaleFemale" = "F")) %>%
+  mutate(across(c(sex_field,
+                  sex_final),
+                ~ recode(.,
+                         "FemaleFemale" = "F"))) %>%
   mutate(record_id = seq(from = max(bio_df$record_id) + 1,
                          by = 1,
                          length.out = n())) %>%
@@ -314,7 +315,7 @@ bio_2022 <- read_csv(here("analysis/data/raw_data/WDFW",
          tag_code = pit_tag,
          species,
          trap_date = event_date,
-         sex,
+         sex = sex_field,
          origin = final_origin,
          fork_length = length,
          age = scale_age,
