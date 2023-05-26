@@ -5,6 +5,11 @@
 # Notes:
 
 #-----------------------------------------------------------------
+# for years prior to 2023, install an older version that doesn't include some of the uppermost sites in the Okanogan
+devtools::install_github("KevinSee/DABOM",
+                         ref = "v2.0.1")
+
+#-----------------------------------------------------------------
 # load needed libraries
 library(DABOM)
 library(PITcleanr)
