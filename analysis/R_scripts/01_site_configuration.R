@@ -306,14 +306,15 @@ sites_sf = writeOldNetworks()$PriestRapids %>%
   rename(site_code = SiteID) %>%
   # add a few sites in the Okanogan region
   # exclude CHJO because fish detected there have some strange detection histories
-  bind_rows(tibble(site_code = c(#"CHJO",
-    "OMF",
-    "OKM",
-    "OKW",
-    "SKA",
-    "OKS",
-    "OKP",
-    "OMH"))) %>%
+  bind_rows(
+    tibble(site_code = c(#"CHJO",
+      "OMF",
+      "OKM",
+      "OKW",
+      "SKA",
+      "OKS",
+      "OKP",
+      "OMH"))) %>%
   left_join(configuration) %>%
   group_by(site_code) %>%
   filter(config_id == max(config_id)) %>%
@@ -392,11 +393,22 @@ ggplot() +
   #           st_convex_hull(),
   #         fill = NA,
   #         lwd = 2) +
-geom_sf(data = sites_sf,
-        size = 4,
-        color = "black") +
-  geom_sf_label(data = sites_sf,
-                aes(label = site_code)) +
+  geom_sf(data = sites_sf,
+          size = 4,
+          color = "black") +
+  # geom_sf_label(data = sites_sf,
+  #               size = 1.5,
+  #               aes(label = site_code)) +
+  ggrepel::geom_label_repel(
+    data = sites_sf |>
+      filter(site_code != root_site),
+    aes(label = site_code,
+        geometry = geometry),
+    size = 1.5,
+    stat = "sf_coordinates",
+    min.segment.length = 0,
+    max.overlaps = 100
+  ) +
   geom_sf_label(data = sites_sf %>%
                   filter(site_code == root_site),
                 aes(label = site_code),
