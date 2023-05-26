@@ -99,7 +99,9 @@ if(nrow(dbl_tag) > 0) {
 }
 
 # any orphaned or disowned tags?
-qcTagHistory(ptagis_obs, T)
+qcTagHistory(ptagis_obs,
+             "PTAGIS",
+             ignore_event_vs_release = T)
 
 # compress and process those observations with PITcleanr
 prepped_ch = PITcleanr::prepWrapper(ptagis_file = ptagis_obs,
