@@ -16,7 +16,7 @@ library(here)
 
 #-----------------------------------------------------------------
 # load configuration and site_df data
-load(here('analysis/data/derived_data/site_config.rda'))
+load(here('DabomPriestRapidsSthd/analysis/data/derived_data/site_config.rda'))
 
 #-----------------------------------------------------------------
 # Load required DABOM data
@@ -33,7 +33,7 @@ yr = 2022
 #   filter(year == yr)
 
 # load processed detection histories
-load(here('analysis/data/derived_data/PITcleanr',
+load(here('DabomPriestRapidsSthd/analysis/data/derived_data/PITcleanr',
           paste0('UC_Steelhead_', yr, '.rda')))
 
 # filter to keep only the observations you want to keep
@@ -51,7 +51,7 @@ fish_origin = bio_df %>%
   distinct()
 
 # file path to the default and initial model
-basic_modNm = here('analysis/model_files', "PRA_DABOM.txt")
+basic_modNm = here('DabomPriestRapidsSthd/analysis/model_files', "PRA_DABOM.txt")
 
 writeDABOM(file_name = basic_modNm,
            parent_child = parent_child,
@@ -65,7 +65,7 @@ writeDABOM(file_name = basic_modNm,
 #------------------------------------------------------------------------------
 
 # filepath for specific JAGS model code for species and year
-mod_path = here('analysis/model_files',
+mod_path = here('DabomPriestRapidsSthd/analysis/model_files',
                 paste0('PRA_Steelhead_', yr, '.txt'))
 
 # writes species and year specific jags code
@@ -113,7 +113,7 @@ dabom_mod = coda.samples(jags,
 
 
 save(dabom_mod, jags_data, filter_obs, bio_df,
-     file = here("analysis/data/derived_data/model_fits",
+     file = here("DabomPriestRapidsSthd/analysis/data/derived_data/model_fits",
                  paste0('PRA_DABOM_Steelhead_', yr,'.rda')))
 
 # rm(dabom_mod, jags_data, filter_obs)
@@ -123,7 +123,7 @@ save(dabom_mod, jags_data, filter_obs, bio_df,
 # diagnostics
 #------------------------------------------------------------------------------
 # load model run
-load(here("analysis/data/derived_data/model_fits",
+load(here("DabomPriestRapidsSthd/analysis/data/derived_data/model_fits",
           paste0('PRA_DABOM_Steelhead_', yr,'.rda')))
 
 # using mcmcr package
@@ -219,7 +219,7 @@ post_summ(my_mod,
 diag_plots(post = my_mod,
            p = param_chk,
            save = F,
-           file = here('outgoing/PRA_diagnostics.pdf'))
+           file = here('DabomPriestRapidsSthd/outgoing/PRA_diagnostics.pdf'))
 
 # calculate Brooks-Gelman-Rubin Potential Scale Reduction Factor (Rhat)
 # if ratio is close to 1, the chains have converged to the same distribution
@@ -264,5 +264,5 @@ diag_plots(post = my_mod,
 diag_plots(post = my_mod,
            p = param_chk,
            save = T,
-           file = here('outgoing/figures/DABOM_trace_plots.pdf'))
+           file = here('DabomPriestRapidsSthd/outgoing/figures/DABOM_trace_plots.pdf'))
 
