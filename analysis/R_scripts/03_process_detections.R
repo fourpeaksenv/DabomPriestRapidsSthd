@@ -221,7 +221,7 @@ tag_summ %>%
   as.data.frame()
 
 # where are tags assigned?
-janitor::tabyl(tag_summ, spawn_node) %>%
+janitor::tabyl(tag_summ, final_node) %>%
   arrange(desc(n)) %>%
   janitor::adorn_totals()
 
@@ -268,7 +268,7 @@ brnch_df = buildNodeOrder(addParentChildNodes(parent_child, configuration)) %>%
 
 tag_summ %<>%
   left_join(brnch_df %>%
-              select(spawn_node = node,
+              select(final_node = node,
                      branch_nm))
 
 # how many tags in each branch?
