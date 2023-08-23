@@ -102,7 +102,7 @@ for(yr in 2011:2022) {
 
   tag_summ %<>%
     left_join(brnch_df,
-              by = c("spawn_node" = "node"))
+              by = c("final_node" = "node"))
 
 
 
