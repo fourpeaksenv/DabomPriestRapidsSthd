@@ -27,7 +27,7 @@ library(here)
 
 #-----------------------------------------------------------------
 # load configuration and site_df data
-load(here('analysis/data/derived_data',
+load(here('DabomPriestRapidsSthd/analysis/data/derived_data',
           'site_config.rda'))
 
 #-----------------------------------------------------------------
@@ -53,11 +53,11 @@ for(yr in 2011:2022) {
 
 
   # load compressed detections and biological data
-  load(here('analysis/data/derived_data/PITcleanr',
+  load(here('DabomPriestRapidsSthd/analysis/data/derived_data/PITcleanr',
             paste0('UC_Steelhead_', yr, '.rda')))
 
   # load JAGS MCMC results
-  load(here("analysis/data/derived_data/model_fits",
+  load(here("DabomPriestRapidsSthd/analysis/data/derived_data/model_fits",
             paste0('PRA_DABOM_Steelhead_', yr,'.rda')))
 
 
@@ -414,7 +414,7 @@ for(yr in 2011:2022) {
          flowlines,
          parent_child,
          sites_sf,
-         file = here("analysis/data/derived_data/estimates",
+         file = here("DabomPriestRapidsSthd/analysis/data/derived_data/estimates",
                      dam_cnt_name,
                      paste0("UC_Sthd_DABOM_", yr, ".rda")))
   }
@@ -436,7 +436,7 @@ for(yr in 2011:2022) {
   }
 
 
-  load(here("analysis/data/derived_data/estimates",
+  load(here("DabomPriestRapidsSthd/analysis/data/derived_data/estimates",
             dam_cnt_name,
             paste0("UC_Sthd_DABOM_", yr, ".rda")))
 
@@ -1081,7 +1081,7 @@ for(yr in 2011:2022) {
   #                     path = here(excel_file_path,
   #                                 paste0('UC_Steelhead_', yr, '_', format(Sys.Date(), '%Y%m%d'), '.xlsx')))
 
-  excel_file_path = "T:/DFW-Team FP Upper Columbia Escapement - General/UC_Sthd/Data Requests/"
+  excel_file_path = "external_data/derived_data"
 
   writexl::write_xlsx(x = save_list,
                       path = here(excel_file_path,
