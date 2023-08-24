@@ -1176,12 +1176,45 @@ comp_df = dam_est %>%
           origin)
 
 # add adjustments if re-ascension rate is the same everywhere as it is at Priest
-comp_df %<>%
-  add_column(reasc_rate = unique(org_escape$reasc_rate)) %>%
-  mutate(adj_win_cnt = win_cnt * (1 - reasc_rate))
+# comp_df %<>%
+#   add_column(reasc_rate = unique(org_escape$reasc_rate)) %>%
+#   mutate(adj_win_cnt = win_cnt * (1 - reasc_rate))
+#
+# comp_df %>%
+#   ggplot(aes(x = dam,
+#              y = mean,
+#              color = "DABOM")) +
+#   geom_errorbar(aes(ymin = lowerCI,
+#                     ymax = upperCI),
+#                 width = 0) +
+#   geom_point(size = 3) +
+#   geom_point(aes(y = win_cnt,
+#                  color = "Dam Count"),
+#              size = 3,
+#              position = position_dodge(width = 1)) +
+#   geom_point(aes(y = adj_win_cnt,
+#                  color = "Adj. Dam Count"),
+#              size = 3,
+#              position = position_dodge(width = 1)) +
+#   scale_color_manual(values = c("DABOM" = "gray20",
+#                                 "Dam Count" = "red",
+#                                 "Adj. Dam Count" = "blue"),
+#                      name = "Source") +
+#   facet_wrap(~ origin,
+#              scales = "free_y") +
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle = 45,
+#                                    hjust = 1),
+#         legend.position = "bottom") +
+#   labs(x = "Dam",
+#        y = "Estimate",
+#        title = paste("Steelhead", yr),
+#        subtitle = "Using Rock Island Counts")
 
-comp_df %>%
-  ggplot(aes(x = dam,
+comp_df_trial <- left_join(comp_df, org_escape, by="origin")
+comp_df_trial %<>% mutate(adj_win_cnt = win_cnt * (1 - reasc_rate))
+comp_df_trial %>%
+  ggplot(aes(x = dam.x,
              y = mean,
              color = "DABOM")) +
   geom_errorbar(aes(ymin = lowerCI,
