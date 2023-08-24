@@ -6,8 +6,8 @@
 
 #-----------------------------------------------------------------
 # for years prior to 2023, install an older version that doesn't include some of the uppermost sites in the Okanogan
-#devtools::install_github("KevinSee/DABOM",
-#                         ref = "v2.0.1")
+devtools::install_github("KevinSee/DABOM",
+                         ref = "v2.0.1")
 
 #-----------------------------------------------------------------
 # load needed libraries
@@ -753,7 +753,7 @@ for(yr in 2011:2022) {
 
   # proportions of each type of fish (H/W, Ad-clip, CWT combinations) past each site
   mark_grp_prop = mark_tag_summ %>%
-    mutate(spawn_site = str_remove(spawn_node, "B0$"),
+    mutate(spawn_site = str_remove(final_node, "B0$"),
            spawn_site = str_remove(spawn_site, "A0$"),
            spawn_site = recode(spawn_site,
                                "S" = "SA0")) %>%
@@ -840,16 +840,30 @@ for(yr in 2011:2022) {
              ad_clip,
              cwt,
              mark_grp) %>%
+
+    # summarise(across(n_fish,
+    #                  list(mean = mean,
+    #                       median = median,
+    #                       mode = estMode,
+    #                       se = sd,
+    #                       skew = moments::skewness,
+    #                       kurtosis = moments::kurtosis,
+    #                       lowerCI = ~ coda::HPDinterval(coda::as.mcmc(.x))[,1],
+    #                       upperCI = ~ coda::HPDinterval(coda::as.mcmc(.x))[,2]),
+    #                  na.rm = T,
+    #                  .names = "{.fn}"),
+    #           .groups = "drop") %>%
+
     summarise(across(n_fish,
-                     list(mean = mean,
-                          median = median,
-                          mode = estMode,
-                          se = sd,
-                          skew = moments::skewness,
-                          kurtosis = moments::kurtosis,
-                          lowerCI = ~ coda::HPDinterval(coda::as.mcmc(.x))[,1],
-                          upperCI = ~ coda::HPDinterval(coda::as.mcmc(.x))[,2]),
-                     na.rm = T,
+                     list(mean = ~mean(.x, na.rm = TRUE),
+                          median = ~median(.x, na.rm = TRUE),
+                          mode = ~estMode(.x, na.rm = TRUE),
+                          se = ~sd(.x, na.rm = TRUE),
+                          skew = ~moments::skewness(.x, na.rm = TRUE),
+                          kurtosis = ~moments::kurtosis(.x, na.rm = TRUE),
+                          lowerCI = ~ coda::HPDinterval(coda::as.mcmc(.x, na.rm = TRUE))[,1],
+                          upperCI = ~ coda::HPDinterval(coda::as.mcmc(.x, na.rm = TRUE))[,2]),
+                     #na.rm = T,
                      .names = "{.fn}"),
               .groups = "drop") %>%
     mutate(across(mode,
