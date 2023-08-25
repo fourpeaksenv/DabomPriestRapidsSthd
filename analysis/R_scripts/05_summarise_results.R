@@ -6,8 +6,8 @@
 
 #-----------------------------------------------------------------
 # for years prior to 2023, install an older version that doesn't include some of the uppermost sites in the Okanogan
-devtools::install_github("KevinSee/DABOM",
-                         ref = "v2.0.1")
+# devtools::install_github("KevinSee/DABOM",
+#                          ref = "v2.0.1")
 
 #-----------------------------------------------------------------
 # load needed libraries
@@ -121,11 +121,22 @@ for(yr in 2011:2022) {
     arrange(desc(sd))
 
   # compile all movement probabilities, and multiply them appropriately
-  trans_df = compileTransProbs_PRA(dabom_mod,
-                                   parent_child) %>%
-    mutate(origin = recode(origin,
-                           "2" = "H",
-                           "1" = "W"))
+
+
+  if(yr<2023){
+    trans_df = compileTransProbs_PRA_pre2023(dabom_mod,
+                                     parent_child) %>%
+      mutate(origin = recode(origin,
+                             "2" = "H",
+                             "1" = "W"))
+  }
+  else{
+    trans_df = compileTransProbs_PRA(dabom_mod,
+                                     parent_child) %>%
+      mutate(origin = recode(origin,
+                             "2" = "H",
+                             "1" = "W"))
+  }
 
   # summarize transition probabilities
   trans_summ = trans_df %>%
