@@ -9,6 +9,8 @@
 # devtools::install_github("KevinSee/DABOM",
 #                          ref = "v2.0.1")
 
+#for fourpeaks version
+devtools::install_github("fourpeaksenv/DABOM")
 #-----------------------------------------------------------------
 # load needed libraries
 library(DABOM)
