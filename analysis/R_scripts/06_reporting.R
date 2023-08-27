@@ -4,6 +4,7 @@
 # Last Modified: 4/12/2023
 # Notes:
 
+devtools::install_github("fourpeaksenv/sroem")
 #-----------------------------------------------------------------
 # load needed libraries
 library(tidyverse)
@@ -85,9 +86,32 @@ spwn_est <- crossing(population = c("Wenatchee",
                                   rem_df)
 
                                if(pop == "Wenatchee") {
-                                 prep_wen_sthd_data(query_year = yr,
-                                                    n_observers = "two",
-                                                    save_rda = F)
+                                 # prep_wen_sthd_data(query_year = yr,
+                                 #                    n_observers = "two",
+                                 #                    save_rda = F)
+
+                                 prep_wen_sthd_data(
+                                   redd_file_path =
+                                     here("external_data","raw_data"),
+                                   redd_file_name = "STHD_Wenatchee_Redd_Surveys.xlsx",
+                                   experience_path = here("external_data","raw_data"),
+                                   experience_file_name = "STHD_Surveyor_Experience.xlsx",
+                                   dabom_file_path =
+                                     here("external_data","raw_data"),
+                                   dabom_file_name = "UC_STHD_Model_Output.xlsx",
+                                   brood_file_path =
+                                     here("external_data","raw_data"),
+                                   brood_file_name = "STHD_UC Brood Collections_2011 to current.xlsx",
+                                   removal_file_path =
+                                     here("external_data","raw_data"),
+                                   removal_file_name = "STHD_Removals.xlsx",
+                                   n_observers = "two",
+                                   query_year = yr,
+                                   save_rda = F,
+                                   save_by_year = T,
+                                   save_file_name = NULL
+                                 )
+
                                  escp_est = escp_wen
                                  rm(escp_wen)
                                } else if(pop == "Methow") {
@@ -505,7 +529,7 @@ dabom_est <- crossing(spawn_year = c(2011:max_yr)) %>%
                               message(paste("\n\t Estimates from", yr, "\n"))
 
                               # load data
-                              load(here("analysis/data/derived_data/estimates",
+                              load(here("DabomPriestRapidsSthd/analysis/data/derived_data/estimates",
                                         dam_cnt_name,
                                         paste0("UC_Sthd_DABOM_", yr, ".rda")))
 
@@ -1495,7 +1519,7 @@ priest_df = tibble(spawn_year = 2011:max_yr) |>
   mutate(prd_df = map(spawn_year,
                       .f = function(yr) {
                         # load data
-                        load(here("analysis/data/derived_data/estimates",
+                        load(here("DabomPriestRapidsSthd/analysis/data/derived_data/estimates",
                                   "PriestRapids",
                                   paste0("UC_Sthd_DABOM_", yr, ".rda")))
 
@@ -1544,7 +1568,7 @@ rock_isl_df = priest_df |>
   mutate(ria_df = map(spawn_year,
                       .f = function(yr) {
                         # load data
-                        load(here("analysis/data/derived_data/estimates",
+                        load(here("DabomPriestRapidsSthd/analysis/data/derived_data/estimates",
                                   "RockIsland",
                                   paste0("UC_Sthd_DABOM_", yr, ".rda")))
 
