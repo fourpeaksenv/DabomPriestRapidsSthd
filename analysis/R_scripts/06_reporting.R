@@ -3,8 +3,9 @@
 # Created: 11/30/22
 # Last Modified: 4/12/2023
 # Notes:
-
+options(timeout=9999999)
 devtools::install_github("fourpeaksenv/sroem")
+devtools::install_github("fourpeaksenv/DabomPriestRapidsSthd")
 #-----------------------------------------------------------------
 # load needed libraries
 library(tidyverse)
@@ -22,7 +23,7 @@ library(sroem)
 
 # load age table
 data("age_table")
-
+data(package = "DabomPriestRapidsSthd", "age_table")
 #-----------------------------------------------------------------
 # function to fix all table names
 makeTableNms = function(df) {
@@ -891,7 +892,7 @@ dabom_est <- crossing(spawn_year = c(2011:max_yr)) %>%
 
 
                               mark_grp_prop = mark_tag_summ |>
-                                mutate(spawn_site = str_remove(spawn_node, "B0$"),
+                                mutate(spawn_site = str_remove(final_node, "B0$"),
                                        spawn_site = str_remove(spawn_site, "A0$"),
                                        spawn_site = recode(spawn_site,
                                                            "S" = "SA0")) |>
@@ -1158,7 +1159,7 @@ tag_df <- dabom_est |>
          ad_clip,
          cwt,
          trap_date,
-         spawn_node:tag_detects,
+         final_node:tag_detects,
          path) |>
   makeTableNms()
 
@@ -1295,10 +1296,9 @@ mark_grp_pop_df <- dabom_est %>%
 #-----------------------------------------------------------------
 # pull together estimates of sex call error rates at Priest
 # check for duplicate tags
-read_excel(paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
-                  "UC_Sthd/inputs/Bio Data/",
-                  "Sex and Origin PRD-Brood Comparison Data/",
-                  "STHD UC Brood Collections_2011 to current.xlsx"),
+read_excel(here("external_data",
+                  "raw_data",
+                  "STHD_UC Brood Collections_2011 to current.xlsx"),
            sheet = "Brood Collected_PIT Tagged Only") |>
   clean_names() |>
   distinct() |>
@@ -1327,10 +1327,9 @@ sex_err_rate <- tag_df |>
   select(spawn_year,
          tag_code,
          sex_field = sex) |>
-  inner_join(read_excel(paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
-                               "UC_Sthd/inputs/Bio Data/",
-                               "Sex and Origin PRD-Brood Comparison Data/",
-                               "STHD UC Brood Collections_2011 to current.xlsx"),
+  inner_join(read_excel(here("external_data",
+                             "raw_data",
+                             "STHD_UC Brood Collections_2011 to current.xlsx"),
                         sheet = "Brood Collected_PIT Tagged Only") |>
                clean_names() |>
                # one tag has two records; choose the one that matches PTAGIS recapture details
