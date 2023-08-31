@@ -1769,9 +1769,7 @@ save_list <- list(
 #-----------------------------------------------------------------
 # actually save entire file
 write_xlsx(x = save_list,
-           path = paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
-                         "UC_Sthd/Estimates/",
-                         "UC_STHD_Model_Output.xlsx"))
+           path = here("output","UC_STHD_Model_Output.xlsx"))
 
 #--------------------------------------------------------------
 # read in previous estimates, add latest year to them
@@ -1780,9 +1778,7 @@ write_xlsx(x = save_list,
 yr = 2022
 
 library(readxl)
-output_path <- paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
-                      "UC_Sthd/Estimates/",
-                      "UC_STHD_Model_Output.xlsx")
+output_path <- here("output","UC_STHD_Model_Output.xlsx")
 
 tab_nms <- excel_sheets(output_path)
 
@@ -1802,11 +1798,14 @@ lst_one_yr <- save_list |>
 
 
 
-identical(names(previous_output), names(lst_2022))
+identical(names(previous_output), names(lst_one_yr))
 
 save_list = vector("list",
                    length = length(previous_output))
 names(save_list) = names(previous_output)
+
+#Maria added the next line
+previous_output[[3]]$'HOS CV' <- as.numeric(previous_output[[3]]$'HOS CV')
 for(i in 1:length(previous_output)) {
   save_list[[i]] <- previous_output[[i]] |>
     bind_rows(lst_one_yr[[i]]) %>%
@@ -1814,5 +1813,5 @@ for(i in 1:length(previous_output)) {
 }
 
 write_xlsx(x = save_list,
-           path = paste0("T:/DFW-Team FP Upper Columbia Escapement - General/UC_Sthd/Estimates/",
+           path = here("output",
                          "UC_STHD_Model_Output.xlsx"))
