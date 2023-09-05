@@ -1317,9 +1317,11 @@ read_excel(here("external_data",
   distinct() |>
   filter(tag_code %in% tag_code[duplicated(tag_code)]) |>
   arrange(tag_code) #|>
-  inner_join(tag_df |>
-               clean_names() |>
-               select(tag_code))
+  # inner_join(tag_df |>
+  #              clean_names() |>
+  #              select(tag_code))
+
+#commenting the previous three lines out to avoid error caused by the # in line 1319
 
 # estimate error rate for each sex
 sex_err_rate <- tag_df |>
