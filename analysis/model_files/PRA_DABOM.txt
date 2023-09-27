@@ -109,6 +109,9 @@ model {
 	 OMKB0_p ~ dbeta(1, 1);
 	 OMKA0_p ~ dbeta(1, 1);
 	 OBF_p ~ dbeta(1, 1);
+	 OMFB0_p ~ dbeta(1, 1);
+	 OMFA0_p ~ dbeta(1, 1);
+	 OMH_p ~ dbeta(1, 1);
 	 WAN_p ~ dbeta(1, 1);
 	 JOH_p ~ dbeta(1, 1);
 	 TNK_p ~ dbeta(1, 1);
@@ -129,6 +132,14 @@ model {
 	 OKCA0_p ~ dbeta(1, 1);
 	 OKVB0_p ~ dbeta(1, 1);
 	 OKVA0_p ~ dbeta(1, 1);
+	 OKM_p ~ dbeta(1, 1);
+	 OKWB0_p ~ dbeta(1, 1);
+	 OKWA0_p ~ dbeta(1, 1);
+	 SKAB0_p ~ dbeta(1, 1);
+	 SKAA0_p ~ dbeta(1, 1);
+	 OKSB0_p ~ dbeta(1, 1);
+	 OKSA0_p ~ dbeta(1, 1);
+	 OKP_p ~ dbeta(1, 1);
 	 FST_p ~ dbeta(1, 1);
 
 # Priors for transition probabilities 
@@ -295,11 +306,32 @@ model {
 	 omega_UWE[3, 1:n_branch_UWE] <- psi_UWE[2,]; 
 	 omega_UWE[3, (n_branch_UWE + 1)] <- 0; 
 
-	 phi_OKC[1] ~ dbeta(1, 1); 
-	 phi_OKC[2] ~ dbeta(1, 1); 
+	 psi_OKC[1, 1:n_branch_OKC] ~ ddirch(OKC_dirch_vec[1,]); 
+	 psi_OKC[2, 1:n_branch_OKC] ~ ddirch(OKC_dirch_vec[2,]); 
+
+	 omega_OKC[1, 1:n_branch_OKC] <- zero_vec[1:(n_branch_OKC)]; 
+	 omega_OKC[1, (n_branch_OKC + 1)] <- 1; 
+
+	 omega_OKC[2, 1:n_branch_OKC] <- psi_OKC[1,]; 
+	 omega_OKC[2, (n_branch_OKC + 1)] <- 0; 
+
+	 omega_OKC[3, 1:n_branch_OKC] <- psi_OKC[2,]; 
+	 omega_OKC[3, (n_branch_OKC + 1)] <- 0; 
 
 	 phi_CHL[1] ~ dbeta(1, 1); 
 	 phi_CHL[2] ~ dbeta(1, 1); 
+
+	 psi_SKA[1, 1:n_branch_SKA] ~ ddirch(SKA_dirch_vec[1,]); 
+	 psi_SKA[2, 1:n_branch_SKA] ~ ddirch(SKA_dirch_vec[2,]); 
+
+	 omega_SKA[1, 1:n_branch_SKA] <- zero_vec[1:(n_branch_SKA)]; 
+	 omega_SKA[1, (n_branch_SKA + 1)] <- 1; 
+
+	 omega_SKA[2, 1:n_branch_SKA] <- psi_SKA[1,]; 
+	 omega_SKA[2, (n_branch_SKA + 1)] <- 0; 
+
+	 omega_SKA[3, 1:n_branch_SKA] <- psi_SKA[2,]; 
+	 omega_SKA[3, (n_branch_SKA + 1)] <- 0; 
 
 	 phi_PES[1] ~ dbeta(1, 1); 
 	 phi_PES[2] ~ dbeta(1, 1); 
@@ -312,6 +344,12 @@ model {
 
 	 phi_NAL[1] ~ dbeta(1, 1); 
 	 phi_NAL[2] ~ dbeta(1, 1); 
+
+	 phi_OBF[1] ~ dbeta(1, 1); 
+	 phi_OBF[2] ~ dbeta(1, 1); 
+
+	 phi_OMF[1] ~ dbeta(1, 1); 
+	 phi_OMF[2] ~ dbeta(1, 1); 
 
 	 psi_ZSL[1, 1:n_branch_ZSL] ~ ddirch(ZSL_dirch_vec[1,]); 
 	 psi_ZSL[2, 1:n_branch_ZSL] ~ ddirch(ZSL_dirch_vec[2,]); 
@@ -336,6 +374,18 @@ model {
 
 	 omega_RRF[3, 1:n_branch_RRF] <- psi_RRF[2,]; 
 	 omega_RRF[3, (n_branch_RRF + 1)] <- 0; 
+
+	 psi_OKM[1, 1:n_branch_OKM] ~ ddirch(OKM_dirch_vec[1,]); 
+	 psi_OKM[2, 1:n_branch_OKM] ~ ddirch(OKM_dirch_vec[2,]); 
+
+	 omega_OKM[1, 1:n_branch_OKM] <- zero_vec[1:(n_branch_OKM)]; 
+	 omega_OKM[1, (n_branch_OKM + 1)] <- 1; 
+
+	 omega_OKM[2, 1:n_branch_OKM] <- psi_OKM[1,]; 
+	 omega_OKM[2, (n_branch_OKM + 1)] <- 0; 
+
+	 omega_OKM[3, 1:n_branch_OKM] <- psi_OKM[2,]; 
+	 omega_OKM[3, (n_branch_OKM + 1)] <- 0; 
 
 # Where is each fish? 
 
@@ -414,9 +464,17 @@ model {
 				 eta_UWE[i,j] <- equals(a_UWE[i],j) # equals(x,y) is a test for equality, returns [1,0] 
 			 }
 
-		 eta_OKC[i] ~ dbern(eta_ZSL[i, 4] * phi_OKC[fish_type[i]]) 
+		 a_OKC[i] ~ dcat( omega_OKC[(eta_ZSL[i,4] * fish_type[i] + 1), 1:(n_branch_OKC+1)] ) 
+			 for (j in 1:n_branch_OKC)	{ 
+				 eta_OKC[i,j] <- equals(a_OKC[i],j) # equals(x,y) is a test for equality, returns [1,0] 
+			 }
 
 		 eta_CHL[i] ~ dbern(eta_TUM[i, 2] * phi_CHL[fish_type[i]]) 
+
+		 a_SKA[i] ~ dcat( omega_SKA[(eta_OKM[i,2] * fish_type[i] + 1), 1:(n_branch_SKA+1)] ) 
+			 for (j in 1:n_branch_SKA)	{ 
+				 eta_SKA[i,j] <- equals(a_SKA[i],j) # equals(x,y) is a test for equality, returns [1,0] 
+			 }
 
 		 eta_PES[i] ~ dbern(eta_LWE[i, 2] * phi_PES[fish_type[i]]) 
 
@@ -426,6 +484,10 @@ model {
 
 		 eta_NAL[i] ~ dbern(eta_UWE[i, 1] * phi_NAL[fish_type[i]]) 
 
+		 eta_OBF[i] ~ dbern(eta_OMK[i] * phi_OBF[fish_type[i]]) 
+
+		 eta_OMF[i] ~ dbern(eta_OBF[i] * phi_OMF[fish_type[i]]) 
+
 		 a_ZSL[i] ~ dcat( omega_ZSL[(eta_OKL[i,11] * fish_type[i] + 1), 1:(n_branch_ZSL+1)] ) 
 			 for (j in 1:n_branch_ZSL)	{ 
 				 eta_ZSL[i,j] <- equals(a_ZSL[i],j) # equals(x,y) is a test for equality, returns [1,0] 
@@ -434,6 +496,11 @@ model {
 		 a_RRF[i] ~ dcat( omega_RRF[(eta_RIA[i,3] * fish_type[i] + 1), 1:(n_branch_RRF+1)] ) 
 			 for (j in 1:n_branch_RRF)	{ 
 				 eta_RRF[i,j] <- equals(a_RRF[i],j) # equals(x,y) is a test for equality, returns [1,0] 
+			 }
+
+		 a_OKM[i] ~ dcat( omega_OKM[(eta_OKC[i,2] * fish_type[i] + 1), 1:(n_branch_OKM+1)] ) 
+			 for (j in 1:n_branch_OKM)	{ 
+				 eta_OKM[i,j] <- equals(a_OKM[i],j) # equals(x,y) is a test for equality, returns [1,0] 
 			 }
 
 	} # end the n_fish loop 
@@ -657,47 +724,69 @@ model {
 
 		 cap_hist[i,107] ~ dbern( OBF_p * eta_OMK[i] );
 
-		 cap_hist[i,108] ~ dbern( WAN_p * eta_OKL[i,4] );
+		 cap_hist[i,108] ~ dbern( OMFB0_p * eta_OBF[i] );
 
-		 cap_hist[i,109] ~ dbern( JOH_p * eta_OKL[i,5] );
+		 cap_hist[i,109] ~ dbern( OMFA0_p * eta_OBF[i] );
 
-		 cap_hist[i,110] ~ dbern( TNK_p * eta_OKL[i,6] );
+		 cap_hist[i,110] ~ dbern( OMH_p * eta_OMF[i] );
 
-		 cap_hist[i,111] ~ dbern( AEN_p * eta_OKL[i,7] );
+		 cap_hist[i,111] ~ dbern( WAN_p * eta_OKL[i,4] );
 
-		 cap_hist[i,112] ~ dbern( BPCB0_p * eta_OKL[i,8] );
+		 cap_hist[i,112] ~ dbern( JOH_p * eta_OKL[i,5] );
 
-		 cap_hist[i,113] ~ dbern( BPCA0_p * eta_OKL[i,8] );
+		 cap_hist[i,113] ~ dbern( TNK_p * eta_OKL[i,6] );
 
-		 cap_hist[i,114] ~ dbern( ANTB0_p * eta_OKL[i,9] );
+		 cap_hist[i,114] ~ dbern( AEN_p * eta_OKL[i,7] );
 
-		 cap_hist[i,115] ~ dbern( ANTA0_p * eta_OKL[i,9] );
+		 cap_hist[i,115] ~ dbern( BPCB0_p * eta_OKL[i,8] );
 
-		 cap_hist[i,116] ~ dbern( WHS_p * eta_OKL[i,10] );
+		 cap_hist[i,116] ~ dbern( BPCA0_p * eta_OKL[i,8] );
 
-		 cap_hist[i,117] ~ dbern( ZSLB0_p * eta_OKL[i,11] );
+		 cap_hist[i,117] ~ dbern( ANTB0_p * eta_OKL[i,9] );
 
-		 cap_hist[i,118] ~ dbern( ZSLA0_p * eta_OKL[i,11] );
+		 cap_hist[i,118] ~ dbern( ANTA0_p * eta_OKL[i,9] );
 
-		 cap_hist[i,119] ~ dbern( TON_p * eta_ZSL[i,1] );
+		 cap_hist[i,119] ~ dbern( WHS_p * eta_OKL[i,10] );
 
-		 cap_hist[i,120] ~ dbern( NMCB0_p * eta_ZSL[i,2] );
+		 cap_hist[i,120] ~ dbern( ZSLB0_p * eta_OKL[i,11] );
 
-		 cap_hist[i,121] ~ dbern( NMCA0_p * eta_ZSL[i,2] );
+		 cap_hist[i,121] ~ dbern( ZSLA0_p * eta_OKL[i,11] );
 
-		 cap_hist[i,122] ~ dbern( OKIB0_p * eta_ZSL[i,3] );
+		 cap_hist[i,122] ~ dbern( TON_p * eta_ZSL[i,1] );
 
-		 cap_hist[i,123] ~ dbern( OKIA0_p * eta_ZSL[i,3] );
+		 cap_hist[i,123] ~ dbern( NMCB0_p * eta_ZSL[i,2] );
 
-		 cap_hist[i,124] ~ dbern( OKCB0_p * eta_ZSL[i,4] );
+		 cap_hist[i,124] ~ dbern( NMCA0_p * eta_ZSL[i,2] );
 
-		 cap_hist[i,125] ~ dbern( OKCA0_p * eta_ZSL[i,4] );
+		 cap_hist[i,125] ~ dbern( OKIB0_p * eta_ZSL[i,3] );
 
-		 cap_hist[i,126] ~ dbern( OKVB0_p * eta_OKC[i] );
+		 cap_hist[i,126] ~ dbern( OKIA0_p * eta_ZSL[i,3] );
 
-		 cap_hist[i,127] ~ dbern( OKVA0_p * eta_OKC[i] );
+		 cap_hist[i,127] ~ dbern( OKCB0_p * eta_ZSL[i,4] );
 
-		 cap_hist[i,128] ~ dbern( FST_p * eta_WEA[i,3] );
+		 cap_hist[i,128] ~ dbern( OKCA0_p * eta_ZSL[i,4] );
+
+		 cap_hist[i,129] ~ dbern( OKVB0_p * eta_OKC[i,1] );
+
+		 cap_hist[i,130] ~ dbern( OKVA0_p * eta_OKC[i,1] );
+
+		 cap_hist[i,131] ~ dbern( OKM_p * eta_OKC[i,2] );
+
+		 cap_hist[i,132] ~ dbern( OKWB0_p * eta_OKM[i,1] );
+
+		 cap_hist[i,133] ~ dbern( OKWA0_p * eta_OKM[i,1] );
+
+		 cap_hist[i,134] ~ dbern( SKAB0_p * eta_OKM[i,2] );
+
+		 cap_hist[i,135] ~ dbern( SKAA0_p * eta_OKM[i,2] );
+
+		 cap_hist[i,136] ~ dbern( OKSB0_p * eta_SKA[i,1] );
+
+		 cap_hist[i,137] ~ dbern( OKSA0_p * eta_SKA[i,1] );
+
+		 cap_hist[i,138] ~ dbern( OKP_p * eta_SKA[i,2] );
+
+		 cap_hist[i,139] ~ dbern( FST_p * eta_WEA[i,3] );
 
 	}  # end the n_fish loop 
 }

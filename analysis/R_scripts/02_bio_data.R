@@ -17,27 +17,27 @@ library(here)
 
 #-----------------------------------------------------------------
 # read in biological data from trap
-list.files(here('analysis/data/raw_data/WDFW'))
+list.files(here('DabomPriestRapidsSthd/analysis/data/raw_data/WDFW'))
 
-bio_raw = excel_sheets(here('analysis/data/raw_data/WDFW/PRD_BiologicalData_BY11-BY15.xlsx'))[-1] %>%
+bio_raw = excel_sheets(here('DabomPriestRapidsSthd/analysis/data/raw_data/WDFW/PRD_BiologicalData_BY11-BY15.xlsx'))[-1] %>%
   as.list() %>%
   rlang::set_names() %>%
   map_df(.id = 'BroodYear',
          .f = function(yr) {
-    data_df = read_excel(here('analysis/data/raw_data/WDFW/PRD_BiologicalData_BY11-BY15.xlsx'),
+    data_df = read_excel(here('DabomPriestRapidsSthd/analysis/data/raw_data/WDFW/PRD_BiologicalData_BY11-BY15.xlsx'),
                          yr)
     return(data_df)
   }) %>%
-  bind_rows(read_excel(here('analysis/data/raw_data/WDFW/Steelhead_PRD_BY2016_QCI.xlsx'),
+  bind_rows(read_excel(here('DabomPriestRapidsSthd/analysis/data/raw_data/WDFW/Steelhead_PRD_BY2016_QCI.xlsx'),
                        "BioData") %>%
               mutate(BroodYear = "BY16")) %>%
-  bind_rows(read_excel(here('analysis/data/raw_data/WDFW/Steelhead_PRD_BY2017_FlatFile.xlsx'),
+  bind_rows(read_excel(here('DabomPriestRapidsSthd/analysis/data/raw_data/WDFW/Steelhead_PRD_BY2017_FlatFile.xlsx'),
                        1) %>%
               mutate(BroodYear = "BY17")) %>%
-  bind_rows(read_excel(here('analysis/data/raw_data/WDFW/BY18 BioData.xlsx'),
+  bind_rows(read_excel(here('DabomPriestRapidsSthd/analysis/data/raw_data/WDFW/BY18 BioData.xlsx'),
                        1) %>%
               mutate(BroodYear = "BY18")) %>%
-  bind_rows(read_excel(here('analysis/data/raw_data/WDFW/BY19 BioData.xlsx'),
+  bind_rows(read_excel(here('DabomPriestRapidsSthd/analysis/data/raw_data/WDFW/BY19 BioData.xlsx'),
                        1) %>%
               mutate(BroodYear = "BY19")) %>%
   mutate(record_id = 1:n()) %>%
@@ -108,7 +108,7 @@ bio_df %>%
 
 #-----------------------------------------------------------------
 # add 2020 bio data
-bio_2020 = read_csv(here('analysis/data/raw_data/WDFW/NBD-2019-189-PRD 1.csv')) %>%
+bio_2020 = read_csv(here('DabomPriestRapidsSthd/analysis/data/raw_data/WDFW/NBD-2019-189-PRD 1.csv')) %>%
   janitor::clean_names() %>%
   mutate(brood_year = "BY20") %>%
   mutate(year = paste0("20", str_remove(brood_year, "^BY")),
@@ -171,7 +171,7 @@ library(methods)
 library(xml2)
 
 # use locally downloaded copy
-xml_file = here('analysis/data/raw_data/WDFW/CME-2020-192-PRD.XML')
+xml_file = here('DabomPriestRapidsSthd/analysis/data/raw_data/WDFW/CME-2020-192-PRD.XML')
 # query it from PTAGIS
 # xml_file = "https://api.ptagis.org/files/mrr/CME-2020-192-PRD.XML"
 
@@ -195,7 +195,7 @@ bio_2021 <- df %>%
                          by = 1,
                          length.out = n())) %>%
   # add some additional information (age) from another file
-  full_join(read_csv(here('analysis/data/raw_data/WDFW/CME-2020-192-PRD correct columns for Kevin final 2-10-21.csv')) %>%
+  full_join(read_csv(here('DabomPriestRapidsSthd/analysis/data/raw_data/WDFW/CME-2020-192-PRD correct columns for Kevin final 2-10-21.csv')) %>%
               janitor::clean_names() %>%
               select(pit_tag,
                      tag_other = second_pit_tag,
@@ -290,7 +290,7 @@ bio_df %<>%
 #-----------------------------------------------------------------
 # add 2022
 
-bio_2022 <- read_csv(here("analysis/data/raw_data/WDFW",
+bio_2022 <- read_csv(here("DabomPriestRapidsSthd/analysis/data/raw_data/WDFW",
                           "2021 OLAFT Steelhead CME-2021-183-PRD final.csv")) %>%
   janitor::clean_names() %>%
   mutate(brood_year = "BY22") %>%
@@ -359,7 +359,7 @@ bio_df %<>%
 #-----------------------------------------------------------------
 bio_df %>%
   split(list(.$year)) %>%
-  write_xlsx(path = here('analysis/data/derived_data',
+  write_xlsx(path = here('DabomPriestRapidsSthd/analysis/data/derived_data',
                          'PRA_Sthd_BioData.xlsx'))
 
 #-----------------------------------------------------------------
@@ -394,14 +394,14 @@ tag_list = bio_df %>%
 
 # just write the latest year
 write_delim(tag_list[[as.character(max_yr)]],
-            file = here('analysis/data/raw_data/tag_lists',
+            file = here('DabomPriestRapidsSthd/analysis/data/raw_data/tag_lists',
                         paste0('UC_Sthd_Tags_', max_yr, '.txt')),
             delim = '\n',
             col_names = F)
 
 # save biological data for later
 write_rds(bio_df,
-          file = here('analysis/data/derived_data',
+          file = here('DabomPriestRapidsSthd/analysis/data/derived_data',
                       paste0('Bio_Data_', min_yr, '_', max_yr, '.rds')))
 
 

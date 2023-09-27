@@ -16,7 +16,7 @@ library(here)
 
 #-----------------------------------------------------------------
 # load configuration and site_df data
-load(here('analysis/data/derived_data/site_config.rda'))
+load(here('DabomPriestRapidsSthd/analysis/data/derived_data/site_config.rda'))
 
 # which spawn year are we dealing with?
 yr = 2022
@@ -24,7 +24,7 @@ yr = 2022
 # for(yr in 2011:2020) {
 
 # load and file biological data
-bio_df = read_rds(here('analysis/data/derived_data/Bio_Data_2011_2022.rds')) %>%
+bio_df = read_rds(here('DabomPriestRapidsSthd/analysis/data/derived_data/Bio_Data_2011_2022.rds')) %>%
   filter(year == yr)
 
 # any double-tagged fish?
@@ -40,7 +40,7 @@ max_obs_date = paste0(yr, "0531")
 
 # get raw observations from PTAGIS
 # These come from running a saved query on the list of tags to be used
-ptagis_file = here("analysis/data/raw_data/PTAGIS",
+ptagis_file = here("DabomPriestRapidsSthd/analysis/data/raw_data/PTAGIS",
                    paste0("UC_Sthd_", yr, "_CTH.csv"))
 
 # recode the PTAGIS observations of double tagged fish so that the tag code matches the TagID (not TagOther)
@@ -48,7 +48,7 @@ ptagis_obs = readCTH(ptagis_file)
 
 # add some observations from Colockum (CLK), a temporary antenna that only operated in some years
 if(yr %in% c(2015, 2018) ) {
-  clk_obs = read_csv(here('analysis/data/raw_data/WDFW/CLK_observations.csv')) %>%
+  clk_obs = read_csv(here('DabomPriestRapidsSthd/analysis/data/raw_data/WDFW/CLK_observations.csv')) %>%
     rename(tag_code = `Tag Code`) %>%
     mutate(event_type_name = "Observation",
            event_site_code_value = 'CLK',
@@ -104,7 +104,7 @@ qcTagHistory(ptagis_obs,
              ignore_event_vs_release = T)
 
 # compress and process those observations with PITcleanr
-prepped_ch = PITcleanr::prepWrapper(ptagis_file = ptagis_obs,
+prepped_ch = PITcleanr::prepWrapper(cth_file = ptagis_obs, # ptagis_file
                                     configuration = configuration,
                                     parent_child = parent_child %>%
                                       addParentChildNodes(configuration = configuration),
@@ -113,12 +113,12 @@ prepped_ch = PITcleanr::prepWrapper(ptagis_file = ptagis_obs,
                                     ignore_event_vs_release = F,
                                     add_tag_detects = T,
                                     save_file = T,
-                                    file_name = here('outgoing/PITcleanr', paste0('UC_Steelhead_', yr, '.xlsx')))
+                                    file_name = here('DabomPriestRapidsSthd/outgoing/PITcleanr', paste0('UC_Steelhead_', yr, '.xlsx')))
 
 
 # save some stuff
 save(parent_child, configuration, start_date, bio_df, prepped_ch,
-     file = here('analysis/data/derived_data/PITcleanr',
+     file = here('DabomPriestRapidsSthd/analysis/data/derived_data/PITcleanr',
                  paste0('UC_Steelhead_', yr, '.rda')))
 
 
@@ -131,12 +131,16 @@ save(parent_child, configuration, start_date, bio_df, prepped_ch,
 #-------------------------------------------
 # NEXT STEPS
 #-------------------------------------------
-# open that Excel file, and filter on the column user_keep_obs, looking for blanks. Fill in each row with TRUE or FALSE, depending on whether that observation should be kept or not. The column auto_keep_obs provides a suggestion, but the biologist's best expert judgment should be used based on detection dates, detection locations before and after, etc.
+# open that Excel file, and filter on the column user_keep_obs, looking for blanks.
+# Fill in each row with TRUE or FALSE, depending on whether that observation
+# should be kept or not. The column auto_keep_obs provides a suggestion, but the
+# biologist's best expert judgment should be used based on detection dates,
+# detection locations before and after, etc.
 
-load(here('analysis/data/derived_data/PITcleanr',
+load(here('DabomPriestRapidsSthd/analysis/data/derived_data/PITcleanr',
           paste0('UC_Steelhead_', yr, '.rda')))
 
-wdfw_df = read_excel(here('analysis/data/derived_data/WDFW',
+wdfw_df = read_excel(here('DabomPriestRapidsSthd/analysis/data/derived_data/WDFW',
                           paste0('UC_Steelhead_', yr, '.xlsx')))
 
 filter_obs = wdfw_df %>%
@@ -154,13 +158,13 @@ tag_path = summarizeTagData(filter_obs,
                               group_by(tag_code) %>%
                               slice(1) %>%
                               ungroup()) %>%
-  select(tag_code, spawn_node) %>%
+  select(tag_code, final_node) %>%
   distinct() %>%
   left_join(all_paths,
-            by = c('spawn_node' = 'end_loc')) %>%
+            by = join_by(final_node == end_loc)) %>%
   rename(tag_path = path)
 
-# check if any user definied keep_obs lead to invalid paths
+# check if any user defined keep_obs lead to invalid paths
 error_tags = filter_obs %>%
   left_join(tag_path) %>%
   rowwise() %>%
@@ -193,7 +197,7 @@ prepped_ch = prepped_ch %>%
                      user_keep_obs))
 
 save(parent_child, configuration, start_date, bio_df, prepped_ch,
-     file = here('analysis/data/derived_data/PITcleanr',
+     file = here('DabomPriestRapidsSthd/analysis/data/derived_data/PITcleanr',
                  paste0('UC_Steelhead_', yr, '.rda')))
 
 
@@ -217,7 +221,7 @@ tag_summ %>%
   as.data.frame()
 
 # where are tags assigned?
-janitor::tabyl(tag_summ, spawn_node) %>%
+janitor::tabyl(tag_summ, final_node) %>%
   arrange(desc(n)) %>%
   janitor::adorn_totals()
 
@@ -264,7 +268,7 @@ brnch_df = buildNodeOrder(addParentChildNodes(parent_child, configuration)) %>%
 
 tag_summ %<>%
   left_join(brnch_df %>%
-              select(spawn_node = node,
+              select(final_node = node,
                      branch_nm))
 
 # how many tags in each branch?

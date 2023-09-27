@@ -6,9 +6,11 @@
 
 #-----------------------------------------------------------------
 # for years prior to 2023, install an older version that doesn't include some of the uppermost sites in the Okanogan
-devtools::install_github("KevinSee/DABOM",
-                         ref = "v2.0.1")
+# devtools::install_github("KevinSee/DABOM",
+#                          ref = "v2.0.1")
 
+#for fourpeaks version
+devtools::install_github("fourpeaksenv/DABOM")
 #-----------------------------------------------------------------
 # load needed libraries
 library(DABOM)
@@ -27,7 +29,7 @@ library(here)
 
 #-----------------------------------------------------------------
 # load configuration and site_df data
-load(here('analysis/data/derived_data',
+load(here('DabomPriestRapidsSthd/analysis/data/derived_data',
           'site_config.rda'))
 
 #-----------------------------------------------------------------
@@ -53,11 +55,11 @@ for(yr in 2011:2022) {
 
 
   # load compressed detections and biological data
-  load(here('analysis/data/derived_data/PITcleanr',
+  load(here('DabomPriestRapidsSthd/analysis/data/derived_data/PITcleanr',
             paste0('UC_Steelhead_', yr, '.rda')))
 
   # load JAGS MCMC results
-  load(here("analysis/data/derived_data/model_fits",
+  load(here("DabomPriestRapidsSthd/analysis/data/derived_data/model_fits",
             paste0('PRA_DABOM_Steelhead_', yr,'.rda')))
 
 
@@ -102,7 +104,7 @@ for(yr in 2011:2022) {
 
   tag_summ %<>%
     left_join(brnch_df,
-              by = c("spawn_node" = "node"))
+              by = c("final_node" = "node"))
 
 
 
@@ -121,11 +123,22 @@ for(yr in 2011:2022) {
     arrange(desc(sd))
 
   # compile all movement probabilities, and multiply them appropriately
-  trans_df = compileTransProbs_PRA(dabom_mod,
-                                   parent_child) %>%
-    mutate(origin = recode(origin,
-                           "2" = "H",
-                           "1" = "W"))
+
+
+  if(yr<2023){
+    trans_df = compileTransProbs_PRA_pre2023(dabom_mod,
+                                     parent_child) %>%
+      mutate(origin = recode(origin,
+                             "2" = "H",
+                             "1" = "W"))
+  }
+  else{
+    trans_df = compileTransProbs_PRA(dabom_mod,
+                                     parent_child) %>%
+      mutate(origin = recode(origin,
+                             "2" = "H",
+                             "1" = "W"))
+  }
 
   # summarize transition probabilities
   trans_summ = trans_df %>%
@@ -414,7 +427,7 @@ for(yr in 2011:2022) {
          flowlines,
          parent_child,
          sites_sf,
-         file = here("analysis/data/derived_data/estimates",
+         file = here("DabomPriestRapidsSthd/analysis/data/derived_data/estimates",
                      dam_cnt_name,
                      paste0("UC_Sthd_DABOM_", yr, ".rda")))
   }
@@ -436,7 +449,7 @@ for(yr in 2011:2022) {
   }
 
 
-  load(here("analysis/data/derived_data/estimates",
+  load(here("DabomPriestRapidsSthd/analysis/data/derived_data/estimates",
             dam_cnt_name,
             paste0("UC_Sthd_DABOM_", yr, ".rda")))
 
@@ -753,7 +766,7 @@ for(yr in 2011:2022) {
 
   # proportions of each type of fish (H/W, Ad-clip, CWT combinations) past each site
   mark_grp_prop = mark_tag_summ %>%
-    mutate(spawn_site = str_remove(spawn_node, "B0$"),
+    mutate(spawn_site = str_remove(final_node, "B0$"),
            spawn_site = str_remove(spawn_site, "A0$"),
            spawn_site = recode(spawn_site,
                                "S" = "SA0")) %>%
@@ -840,16 +853,30 @@ for(yr in 2011:2022) {
              ad_clip,
              cwt,
              mark_grp) %>%
+
+    # summarise(across(n_fish,
+    #                  list(mean = mean,
+    #                       median = median,
+    #                       mode = estMode,
+    #                       se = sd,
+    #                       skew = moments::skewness,
+    #                       kurtosis = moments::kurtosis,
+    #                       lowerCI = ~ coda::HPDinterval(coda::as.mcmc(.x))[,1],
+    #                       upperCI = ~ coda::HPDinterval(coda::as.mcmc(.x))[,2]),
+    #                  na.rm = T,
+    #                  .names = "{.fn}"),
+    #           .groups = "drop") %>%
+
     summarise(across(n_fish,
-                     list(mean = mean,
-                          median = median,
-                          mode = estMode,
-                          se = sd,
-                          skew = moments::skewness,
-                          kurtosis = moments::kurtosis,
-                          lowerCI = ~ coda::HPDinterval(coda::as.mcmc(.x))[,1],
-                          upperCI = ~ coda::HPDinterval(coda::as.mcmc(.x))[,2]),
-                     na.rm = T,
+                     list(mean = ~mean(.x, na.rm = TRUE),
+                          median = ~median(.x, na.rm = TRUE),
+                          mode = ~estMode(.x, na.rm = TRUE),
+                          se = ~sd(.x, na.rm = TRUE),
+                          skew = ~moments::skewness(.x, na.rm = TRUE),
+                          kurtosis = ~moments::kurtosis(.x, na.rm = TRUE),
+                          lowerCI = ~ coda::HPDinterval(coda::as.mcmc(.x, na.rm = TRUE))[,1],
+                          upperCI = ~ coda::HPDinterval(coda::as.mcmc(.x, na.rm = TRUE))[,2]),
+                     #na.rm = T,
                      .names = "{.fn}"),
               .groups = "drop") %>%
     mutate(across(mode,
@@ -1081,7 +1108,7 @@ for(yr in 2011:2022) {
   #                     path = here(excel_file_path,
   #                                 paste0('UC_Steelhead_', yr, '_', format(Sys.Date(), '%Y%m%d'), '.xlsx')))
 
-  excel_file_path = "T:/DFW-Team FP Upper Columbia Escapement - General/UC_Sthd/Data Requests/"
+  excel_file_path = "external_data/derived_data"
 
   writexl::write_xlsx(x = save_list,
                       path = here(excel_file_path,
@@ -1162,12 +1189,45 @@ comp_df = dam_est %>%
           origin)
 
 # add adjustments if re-ascension rate is the same everywhere as it is at Priest
-comp_df %<>%
-  add_column(reasc_rate = unique(org_escape$reasc_rate)) %>%
-  mutate(adj_win_cnt = win_cnt * (1 - reasc_rate))
+# comp_df %<>%
+#   add_column(reasc_rate = unique(org_escape$reasc_rate)) %>%
+#   mutate(adj_win_cnt = win_cnt * (1 - reasc_rate))
+#
+# comp_df %>%
+#   ggplot(aes(x = dam,
+#              y = mean,
+#              color = "DABOM")) +
+#   geom_errorbar(aes(ymin = lowerCI,
+#                     ymax = upperCI),
+#                 width = 0) +
+#   geom_point(size = 3) +
+#   geom_point(aes(y = win_cnt,
+#                  color = "Dam Count"),
+#              size = 3,
+#              position = position_dodge(width = 1)) +
+#   geom_point(aes(y = adj_win_cnt,
+#                  color = "Adj. Dam Count"),
+#              size = 3,
+#              position = position_dodge(width = 1)) +
+#   scale_color_manual(values = c("DABOM" = "gray20",
+#                                 "Dam Count" = "red",
+#                                 "Adj. Dam Count" = "blue"),
+#                      name = "Source") +
+#   facet_wrap(~ origin,
+#              scales = "free_y") +
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle = 45,
+#                                    hjust = 1),
+#         legend.position = "bottom") +
+#   labs(x = "Dam",
+#        y = "Estimate",
+#        title = paste("Steelhead", yr),
+#        subtitle = "Using Rock Island Counts")
 
-comp_df %>%
-  ggplot(aes(x = dam,
+comp_df_trial <- left_join(comp_df, org_escape, by="origin")
+comp_df_trial %<>% mutate(adj_win_cnt = win_cnt * (1 - reasc_rate))
+comp_df_trial %>%
+  ggplot(aes(x = dam.x,
              y = mean,
              color = "DABOM")) +
   geom_errorbar(aes(ymin = lowerCI,

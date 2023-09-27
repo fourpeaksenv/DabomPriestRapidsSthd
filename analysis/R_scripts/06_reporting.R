@@ -3,7 +3,9 @@
 # Created: 11/30/22
 # Last Modified: 4/12/2023
 # Notes:
-
+options(timeout=9999999)
+devtools::install_github("fourpeaksenv/sroem")
+devtools::install_github("fourpeaksenv/DabomPriestRapidsSthd")
 #-----------------------------------------------------------------
 # load needed libraries
 library(tidyverse)
@@ -21,7 +23,7 @@ library(sroem)
 
 # load age table
 data("age_table")
-
+data(package = "DabomPriestRapidsSthd", "age_table")
 #-----------------------------------------------------------------
 # function to fix all table names
 makeTableNms = function(df) {
@@ -85,9 +87,32 @@ spwn_est <- crossing(population = c("Wenatchee",
                                   rem_df)
 
                                if(pop == "Wenatchee") {
-                                 prep_wen_sthd_data(query_year = yr,
-                                                    n_observers = "two",
-                                                    save_rda = F)
+                                 # prep_wen_sthd_data(query_year = yr,
+                                 #                    n_observers = "two",
+                                 #                    save_rda = F)
+
+                                 prep_wen_sthd_data(
+                                   redd_file_path =
+                                     here("external_data","raw_data"),
+                                   redd_file_name = "STHD_Wenatchee_Redd_Surveys.xlsx",
+                                   experience_path = here("external_data","raw_data"),
+                                   experience_file_name = "STHD_Surveyor_Experience.xlsx",
+                                   dabom_file_path =
+                                     here("external_data","raw_data"),
+                                   dabom_file_name = "UC_STHD_Model_Output.xlsx",
+                                   brood_file_path =
+                                     here("external_data","raw_data"),
+                                   brood_file_name = "STHD_UC Brood Collections_2011 to current.xlsx",
+                                   removal_file_path =
+                                     here("external_data","raw_data"),
+                                   removal_file_name = "STHD_Removals.xlsx",
+                                   n_observers = "two",
+                                   query_year = yr,
+                                   save_rda = F,
+                                   save_by_year = T,
+                                   save_file_name = NULL
+                                 )
+
                                  escp_est = escp_wen
                                  rm(escp_wen)
                                } else if(pop == "Methow") {
@@ -505,7 +530,7 @@ dabom_est <- crossing(spawn_year = c(2011:max_yr)) %>%
                               message(paste("\n\t Estimates from", yr, "\n"))
 
                               # load data
-                              load(here("analysis/data/derived_data/estimates",
+                              load(here("DabomPriestRapidsSthd/analysis/data/derived_data/estimates",
                                         dam_cnt_name,
                                         paste0("UC_Sthd_DABOM_", yr, ".rda")))
 
@@ -867,7 +892,7 @@ dabom_est <- crossing(spawn_year = c(2011:max_yr)) %>%
 
 
                               mark_grp_prop = mark_tag_summ |>
-                                mutate(spawn_site = str_remove(spawn_node, "B0$"),
+                                mutate(spawn_site = str_remove(final_node, "B0$"),
                                        spawn_site = str_remove(spawn_site, "A0$"),
                                        spawn_site = recode(spawn_site,
                                                            "S" = "SA0")) |>
@@ -1134,7 +1159,7 @@ tag_df <- dabom_est |>
          ad_clip,
          cwt,
          trap_date,
-         spawn_node:tag_detects,
+         final_node:tag_detects,
          path) |>
   makeTableNms()
 
@@ -1271,10 +1296,9 @@ mark_grp_pop_df <- dabom_est %>%
 #-----------------------------------------------------------------
 # pull together estimates of sex call error rates at Priest
 # check for duplicate tags
-read_excel(paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
-                  "UC_Sthd/inputs/Bio Data/",
-                  "Sex and Origin PRD-Brood Comparison Data/",
-                  "STHD UC Brood Collections_2011 to current.xlsx"),
+read_excel(here("external_data",
+                  "raw_data",
+                  "STHD_UC Brood Collections_2011 to current.xlsx"),
            sheet = "Brood Collected_PIT Tagged Only") |>
   clean_names() |>
   distinct() |>
@@ -1293,9 +1317,11 @@ read_excel(paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
   distinct() |>
   filter(tag_code %in% tag_code[duplicated(tag_code)]) |>
   arrange(tag_code) #|>
-  inner_join(tag_df |>
-               clean_names() |>
-               select(tag_code))
+  # inner_join(tag_df |>
+  #              clean_names() |>
+  #              select(tag_code))
+
+#commenting the previous three lines out to avoid error caused by the # in line 1319
 
 # estimate error rate for each sex
 sex_err_rate <- tag_df |>
@@ -1303,10 +1329,9 @@ sex_err_rate <- tag_df |>
   select(spawn_year,
          tag_code,
          sex_field = sex) |>
-  inner_join(read_excel(paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
-                               "UC_Sthd/inputs/Bio Data/",
-                               "Sex and Origin PRD-Brood Comparison Data/",
-                               "STHD UC Brood Collections_2011 to current.xlsx"),
+  inner_join(read_excel(here("external_data",
+                             "raw_data",
+                             "STHD_UC Brood Collections_2011 to current.xlsx"),
                         sheet = "Brood Collected_PIT Tagged Only") |>
                clean_names() |>
                # one tag has two records; choose the one that matches PTAGIS recapture details
@@ -1495,7 +1520,7 @@ priest_df = tibble(spawn_year = 2011:max_yr) |>
   mutate(prd_df = map(spawn_year,
                       .f = function(yr) {
                         # load data
-                        load(here("analysis/data/derived_data/estimates",
+                        load(here("DabomPriestRapidsSthd/analysis/data/derived_data/estimates",
                                   "PriestRapids",
                                   paste0("UC_Sthd_DABOM_", yr, ".rda")))
 
@@ -1544,7 +1569,7 @@ rock_isl_df = priest_df |>
   mutate(ria_df = map(spawn_year,
                       .f = function(yr) {
                         # load data
-                        load(here("analysis/data/derived_data/estimates",
+                        load(here("DabomPriestRapidsSthd/analysis/data/derived_data/estimates",
                                   "RockIsland",
                                   paste0("UC_Sthd_DABOM_", yr, ".rda")))
 
@@ -1746,9 +1771,7 @@ save_list <- list(
 #-----------------------------------------------------------------
 # actually save entire file
 write_xlsx(x = save_list,
-           path = paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
-                         "UC_Sthd/Estimates/",
-                         "UC_STHD_Model_Output.xlsx"))
+           path = here("output","UC_STHD_Model_Output.xlsx"))
 
 #--------------------------------------------------------------
 # read in previous estimates, add latest year to them
@@ -1757,9 +1780,7 @@ write_xlsx(x = save_list,
 yr = 2022
 
 library(readxl)
-output_path <- paste0("T:/DFW-Team FP Upper Columbia Escapement - General/",
-                      "UC_Sthd/Estimates/",
-                      "UC_STHD_Model_Output.xlsx")
+output_path <- here("output","UC_STHD_Model_Output.xlsx")
 
 tab_nms <- excel_sheets(output_path)
 
@@ -1779,11 +1800,14 @@ lst_one_yr <- save_list |>
 
 
 
-identical(names(previous_output), names(lst_2022))
+identical(names(previous_output), names(lst_one_yr))
 
 save_list = vector("list",
                    length = length(previous_output))
 names(save_list) = names(previous_output)
+
+#Maria added the next line
+previous_output[[3]]$'HOS CV' <- as.numeric(previous_output[[3]]$'HOS CV')
 for(i in 1:length(previous_output)) {
   save_list[[i]] <- previous_output[[i]] |>
     bind_rows(lst_one_yr[[i]]) %>%
@@ -1791,5 +1815,5 @@ for(i in 1:length(previous_output)) {
 }
 
 write_xlsx(x = save_list,
-           path = paste0("T:/DFW-Team FP Upper Columbia Escapement - General/UC_Sthd/Estimates/",
+           path = here("output",
                          "UC_STHD_Model_Output.xlsx"))
